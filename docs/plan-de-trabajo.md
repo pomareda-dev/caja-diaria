@@ -207,9 +207,9 @@ puede revisarse/commitearse por separado.
 
 **Criterios de aceptación**
 
-- [ ] `npm run dev` + `php artisan serve` muestran la página de inicio y login.
-- [ ] Registro + login funcionan.
-- [ ] Un componente shadcn-vue de prueba renderiza.
+- [x] `npm run dev` + `php artisan serve` muestran la página de inicio y login.
+- [x] Registro + login funcionan.
+- [x] Un componente shadcn-vue de prueba renderiza.
 
 **Commits sugeridos:** `chore: bootstrap laravel 13 vue starter kit`,
 `chore: locale es_PE and timezone America/Lima`,
