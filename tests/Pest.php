@@ -1,5 +1,6 @@
 <?php
 
+use Dotenv\Dotenv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,8 +16,41 @@ use Tests\TestCase;
 */
 
 pest()->extend(TestCase::class)
- // ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->use(RefreshDatabase::class)
+    ->in('Feature')
+    ->beforeAll(function () {
+        // Ensure the testing database exists before the suite runs.
+        // phpunit.xml sets DB_HOST/DB_PORT/DB_DATABASE via putenv() (readable
+        // through getenv()); DB_USERNAME/DB_PASSWORD come from .env which
+        // Laravel hasn't bootstrapped yet, so we load it via Dotenv (stored
+        // in $_ENV, not via putenv()). We check both sources.
+        $envPath = dirname(__DIR__);
+        if (file_exists($envPath.'/.env')) {
+            Dotenv::createImmutable($envPath)->safeLoad();
+        }
+
+        $env = static function (string $key, string $default): string {
+            $value = getenv($key);
+            if ($value !== false) {
+                return $value;
+            }
+
+            return $_ENV[$key] ?? $default;
+        };
+
+        $host = $env('DB_HOST', '127.0.0.1');
+        $port = $env('DB_PORT', '3306');
+        $database = $env('DB_DATABASE', 'caja_lara_testing');
+        $username = $env('DB_USERNAME', 'root');
+        $password = $env('DB_PASSWORD', '');
+
+        $pdo = new PDO(
+            "mysql:host={$host};port={$port}",
+            $username,
+            $password
+        );
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    });
 
 /*
 |--------------------------------------------------------------------------
