@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import {
+    ArrowLeftRight,
+    BookOpen,
+    FolderGit2,
+    LayoutDashboard,
+    Repeat,
+    Tags,
+    Wallet,
+} from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -14,14 +22,38 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import categorias from '@/routes/categorias';
+import cuentas from '@/routes/cuentas';
+import movimientos from '@/routes/movimientos';
+import recurrentes from '@/routes/recurrentes';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Tablero',
         href: dashboard(),
-        icon: LayoutGrid,
+        icon: LayoutDashboard,
+    },
+    {
+        title: 'Movimientos',
+        href: movimientos.index(),
+        icon: ArrowLeftRight,
+    },
+    {
+        title: 'Categorías',
+        href: categorias.index(),
+        icon: Tags,
+    },
+    {
+        title: 'Cuentas',
+        href: cuentas.index(),
+        icon: Wallet,
+    },
+    {
+        title: 'Recurrentes',
+        href: recurrentes.index(),
+        icon: Repeat,
     },
 ];
 
