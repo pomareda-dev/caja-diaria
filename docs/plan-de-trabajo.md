@@ -318,9 +318,9 @@ límite (equivalente a cols F–H).
 
 **Criterios de aceptación**
 
-- [ ] Creo una categoría “Mercado” con límite 400 y al registrar gastos se
+- [x] Creo una categoría “Mercado” con límite 400 y al registrar gastos se
   actualiza la barra.
-- [ ] Si supero el límite, la barra se pone roja.
+- [x] Si supero el límite, la barra se pone roja.
 
 **Commits:** `feat: category crud`,
 `feat: monthly budget per category with progress bars`,
