@@ -237,8 +237,8 @@ puede revisarse/commitearse por separado.
 
 **Criterios de aceptación**
 
-- [ ] `php artisan migrate:fresh --seed` corre sin errores.
-- [ ] Tests de modelo pasan: `php artisan test --filter=ModelTest`.
+- [x] `php artisan migrate:fresh --seed` corre sin errores.
+- [x] Tests de modelo pasan: `php artisan test --filter=ModelTest`.
 
 **Commits:** `feat: migrations and models for categories/accounts/movements`,
 `feat: scopes for monthly filtering and projection`,
@@ -260,8 +260,8 @@ puede revisarse/commitearse por separado.
 
 **Criterios de aceptación**
 
-- [ ] Navegación entre las 5 secciones funciona sin reload (Inertia).
-- [ ] Los importes se formatean como moneda local.
+- [x] Navegación entre las 5 secciones funciona sin reload (Inertia).
+- [x] Los importes se formatean como moneda local.
 
 **Commits:** `feat: authenticated layout with section navigation`,
 `feat: currency formatting composable`.
@@ -289,10 +289,10 @@ puede revisarse/commitearse por separado.
 
 **Criterios de aceptación**
 
-- [ ] Puedo dar de alta un ingreso y un gasto y verlos en la lista del mes.
-- [ ] La columna Balance coincide con el cálculo esperado.
-- [ ] Los movimientos proyectados (fecha futura) se distinguen de los reales.
-- [ ] Navegar entre meses funciona.
+- [x] Puedo dar de alta un ingreso y un gasto y verlos en la lista del mes.
+- [x] La columna Balance coincide con el cálculo esperado.
+- [x] Los movimientos proyectados (fecha futura) se distinguen de los reales.
+- [x] Navegar entre meses funciona.
 
 **Commits:** `feat: movement resource controller and validation`,
 `feat: monthly movement list with running balance`,
