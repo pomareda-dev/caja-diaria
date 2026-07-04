@@ -40,6 +40,28 @@ class MovementFactory extends Factory
             'source' => 'manual',
             'recurring_id' => null,
             'notes' => fake()->optional(0.3)->sentence(),
+            'is_projected' => false,
+            'sort_order' => 0,
         ];
+    }
+
+    /**
+     * Mark the movement as projected.
+     */
+    public function projected(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_projected' => true,
+        ]);
+    }
+
+    /**
+     * Set a specific sort_order.
+     */
+    public function sortOrder(int $n): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'sort_order' => $n,
+        ]);
     }
 }

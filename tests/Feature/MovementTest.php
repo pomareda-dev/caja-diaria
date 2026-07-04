@@ -35,7 +35,8 @@ test('authenticated user can view movements index', function () {
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('Movimientos/Index')
-        ->has('movements')
+        ->has('realMovements')
+        ->has('projectedMovements')
         ->has('categories')
         ->has('selectedMonth')
         ->has('openingBalance')
@@ -325,10 +326,12 @@ test('running balance calculation is correct', function () {
 
     $response->assertInertia(fn ($page) => $page
         ->where('openingBalance', 1000)
-        ->where('movements.0.amount', 500)
-        ->where('movements.0.running_balance', 1500)
-        ->where('movements.1.amount', -200)
-        ->where('movements.1.running_balance', 1300)
+        ->where('realMovements.0.amount', 500)
+        ->where('realMovements.0.running_balance', 1500)
+        ->where('realMovements.1.amount', -200)
+        ->where('realMovements.1.running_balance', 1300)
+        // July 20 is > today (July 15) → projected
+        ->has('projectedMovements', 1)
     );
 
     Carbon::setTestNow();
@@ -337,6 +340,8 @@ test('running balance calculation is correct', function () {
 test('running balance starts from opening balance', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
 
     // 500 opening balance from previous month
     Movement::factory()->create([
@@ -357,8 +362,10 @@ test('running balance starts from opening balance', function () {
 
     $response->assertInertia(fn ($page) => $page
         ->where('openingBalance', 500)
-        ->where('movements.0.running_balance', 600)
+        ->where('realMovements.0.running_balance', 600)
     );
+
+    Carbon::setTestNow();
 });
 
 // ─── Month Filtering ──────────────────────────────────────────────
@@ -385,8 +392,8 @@ test('movements index respects month filter', function () {
 
     $response->assertInertia(fn ($page) => $page
         ->where('selectedMonth', '2026-06')
-        ->has('movements', 1)
-        ->where('movements.0.description', 'Junio')
+        ->has('realMovements', 1)
+        ->where('realMovements.0.description', 'Junio')
     );
 });
 
@@ -428,8 +435,8 @@ test('projected movements are marked correctly', function () {
     $response = $this->get(route('movimientos.index', ['month' => '2026-07']));
 
     $response->assertInertia(fn ($page) => $page
-        ->where('movements.0.is_projected', false)
-        ->where('movements.1.is_projected', true)
+        ->where('realMovements.0.is_projected', false)
+        ->where('projectedMovements.0.is_projected', true)
     );
 
     Carbon::setTestNow();
@@ -465,6 +472,377 @@ test('opening balance excludes projected and recurring movements from previous m
     );
 
     Carbon::setTestNow();
+});
+
+// ─── Projected Flag & Sort Order ──────────────────────────────────
+
+test('balance_excludes_projected', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Projected movement before month-start — excluded from openingBalance
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-30',
+        'amount' => 500,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    // Real movement before month-start — included in openingBalance
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-28',
+        'amount' => 1000,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    // openingBalance should be 1000 (projected 500 excluded)
+    expect((float) Movement::openingBalance(Carbon::parse('2026-07-01'), $user->id))->toBe(1000.0);
+
+    // Projected movement with date<=today — excluded from realBalance
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-10',
+        'amount' => -200,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    // realBalance should be 1000 (projected -200 excluded)
+    expect((float) Movement::realBalance($user->id))->toBe(1000.0);
+
+    Carbon::setTestNow();
+});
+
+test('index_splits_real_projected', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // 3 real movements (is_projected=false, date<=today)
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-01',
+        'amount' => 100,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-10',
+        'amount' => -50,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 200,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    // 2 projected movements (is_projected=true, date<=today)
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-12',
+        'amount' => 300,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-14',
+        'amount' => -100,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    $response = $this->get(route('movimientos.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->component('Movimientos/Index')
+        ->has('realMovements', 3)
+        ->has('projectedMovements', 2)
+        ->has('categories')
+        ->has('selectedMonth')
+        ->has('openingBalance')
+        ->has('currentMonth')
+        // realMovements have running_balance
+        ->where('realMovements.0.running_balance', fn ($v) => is_numeric($v))
+        // projectedMovements DON'T have running_balance
+        ->missing('projectedMovements.0.running_balance')
+    );
+
+    Carbon::setTestNow();
+});
+
+// ─── Reorder ─────────────────────────────────────────────────────
+
+test('reorder_happy_path', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // 3 real movements same date: A=s1, B=s2, C=s3
+    $a = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 100,
+        'source' => 'manual',
+        'is_projected' => false,
+        'sort_order' => 1,
+    ]);
+    $b = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 200,
+        'source' => 'manual',
+        'is_projected' => false,
+        'sort_order' => 2,
+    ]);
+    $c = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 300,
+        'source' => 'manual',
+        'is_projected' => false,
+        'sort_order' => 3,
+    ]);
+
+    // Reorder: C, A, B
+    $response = $this->patch(route('movimientos.reorder'), [
+        'ids' => [$c->id, $a->id, $b->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $c->refresh();
+    $a->refresh();
+    $b->refresh();
+
+    expect($c->sort_order)->toBe(1);
+    expect($a->sort_order)->toBe(2);
+    expect($b->sort_order)->toBe(3);
+});
+
+test('reorder_rejects_mixed_dates', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $movementA = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 100,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+    $movementB = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-16',
+        'amount' => 200,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    $response = $this->patch(route('movimientos.reorder'), [
+        'ids' => [$movementA->id, $movementB->id],
+    ]);
+
+    $response->assertStatus(422);
+});
+
+test('reorder_rejects_cross_user', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $this->actingAs($user);
+
+    $ownMovement = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 100,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+    $otherMovement = Movement::factory()->create([
+        'user_id' => $other->id,
+        'date' => '2026-07-15',
+        'amount' => 200,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    $response = $this->patch(route('movimientos.reorder'), [
+        'ids' => [$ownMovement->id, $otherMovement->id],
+    ]);
+
+    // Cross-user ids should be rejected
+    $response->assertStatus(403);
+});
+
+test('reorder_single_row_idempotent', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $movement = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 100,
+        'source' => 'manual',
+        'is_projected' => false,
+        'sort_order' => 5,
+    ]);
+
+    $response = $this->patch(route('movimientos.reorder'), [
+        'ids' => [$movement->id],
+    ]);
+
+    $response->assertRedirect();
+
+    $movement->refresh();
+    expect($movement->sort_order)->toBe(5); // unchanged
+});
+
+test('flip_preserves_date_reassigns_sort', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // 5 real movements on 2026-07-20 with sort_order 1..5
+    for ($i = 1; $i <= 5; $i++) {
+        Movement::factory()->create([
+            'user_id' => $user->id,
+            'date' => '2026-07-20',
+            'amount' => 100,
+            'source' => 'manual',
+            'is_projected' => false,
+            'sort_order' => $i,
+        ]);
+    }
+
+    // 1 projected movement on 2026-07-20, sort_order=2
+    $projected = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-20',
+        'amount' => 200,
+        'source' => 'manual',
+        'is_projected' => true,
+        'sort_order' => 2,
+    ]);
+
+    // Flip projected→real (is_projected=0, date unchanged)
+    $this->put(route('movimientos.update', $projected), [
+        'date' => '2026-07-20',
+        'description' => $projected->description,
+        'amount' => (float) $projected->amount,
+        'is_projected' => 0,
+    ]);
+
+    $projected->refresh();
+    expect($projected->is_projected)->toBeFalse();
+    expect($projected->date->format('Y-m-d'))->toBe('2026-07-20');
+    expect($projected->sort_order)->toBe(6); // MAX+1 among reales on that date
+});
+
+test('store_auto_sort_order', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // First real movement on 2026-07-15 → sort_order 1
+    $this->post(route('movimientos.store'), [
+        'date' => '2026-07-15',
+        'description' => 'Primero real',
+        'amount' => 100,
+    ]);
+
+    $this->assertDatabaseHas('movements', [
+        'description' => 'Primero real',
+        'sort_order' => 1,
+    ]);
+
+    // Second real movement on same date → sort_order 2
+    $this->post(route('movimientos.store'), [
+        'date' => '2026-07-15',
+        'description' => 'Segundo real',
+        'amount' => 200,
+    ]);
+
+    $this->assertDatabaseHas('movements', [
+        'description' => 'Segundo real',
+        'sort_order' => 2,
+    ]);
+
+    // Projected movement on same date → sort_order 1 (independent group)
+    $this->post(route('movimientos.store'), [
+        'date' => '2026-07-15',
+        'description' => 'Primero proyectado',
+        'amount' => 300,
+        'is_projected' => 1,
+    ]);
+
+    $this->assertDatabaseHas('movements', [
+        'description' => 'Primero proyectado',
+        'sort_order' => 1,
+    ]);
+});
+
+test('movement_request_is_projected', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // POST without is_projected — defaults to 0
+    $this->post(route('movimientos.store'), [
+        'date' => '2026-07-15',
+        'description' => 'Sin proyectar',
+        'amount' => 100,
+    ]);
+
+    $this->assertDatabaseHas('movements', [
+        'user_id' => $user->id,
+        'description' => 'Sin proyectar',
+        'is_projected' => 0,
+    ]);
+
+    // POST with is_projected=1 — stored as 1
+    $this->post(route('movimientos.store'), [
+        'date' => '2026-07-15',
+        'description' => 'Proyectado',
+        'amount' => 200,
+        'is_projected' => 1,
+    ]);
+
+    $this->assertDatabaseHas('movements', [
+        'user_id' => $user->id,
+        'description' => 'Proyectado',
+        'is_projected' => 1,
+    ]);
+});
+
+test('is_projected_defaults_to_false', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $movement = Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-15',
+        'amount' => 100,
+        'source' => 'manual',
+    ]);
+
+    // DB defaults — is_projected=0, sort_order=0
+    $this->assertDatabaseHas('movements', [
+        'id' => $movement->id,
+        'is_projected' => 0,
+        'sort_order' => 0,
+    ]);
+
+    // Boolean cast — refresh for casts to apply
+    $movement->refresh();
+    expect($movement->is_projected)->toBeFalse();
+    expect($movement->sort_order)->toBe(0);
 });
 
 // ─── Categories in response ───────────────────────────────────────

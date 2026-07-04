@@ -119,8 +119,34 @@ class CajaDiariaDemoSeeder extends Seeder
                 'amount' => $amount,
                 'source' => 'manual',
                 'notes' => null,
+                'is_projected' => false,
+                'sort_order' => 0,
             ]);
         }
+
+        // ─── Manual projected movement for demo ──────────────────
+
+        $user->movements()->create([
+            'date' => $today->copy()->addMonth()->startOfMonth()->format('Y-m-d'),
+            'description' => 'Proyectado: pago estimado de servicios',
+            'category_id' => $servicios->id,
+            'amount' => -200,
+            'source' => 'manual',
+            'notes' => 'Cobro estimado para el próximo mes',
+            'is_projected' => true,
+            'sort_order' => 0,
+        ]);
+
+        $user->movements()->create([
+            'date' => $today->copy()->startOfMonth()->format('Y-m-d'),
+            'description' => 'Proyectado: ingreso extra estimado',
+            'category_id' => $sueldo->id,
+            'amount' => 500,
+            'source' => 'manual',
+            'notes' => 'Posible ingreso adicional',
+            'is_projected' => true,
+            'sort_order' => 0,
+        ]);
 
         // ─── Recurring Transactions ──────────────────────────────
 
@@ -152,6 +178,8 @@ class CajaDiariaDemoSeeder extends Seeder
             'source' => 'recurring',
             'recurring_id' => $sueldoRecurring->id,
             'notes' => null,
+            'is_projected' => false,
+            'sort_order' => 0,
         ]);
 
         $user->movements()->create([
@@ -161,6 +189,8 @@ class CajaDiariaDemoSeeder extends Seeder
             'amount' => 5000,
             'source' => 'import',
             'notes' => 'Saldo inicial importado',
+            'is_projected' => false,
+            'sort_order' => 0,
         ]);
     }
 }
