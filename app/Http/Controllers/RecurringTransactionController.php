@@ -19,6 +19,7 @@ class RecurringTransactionController extends Controller
     public function index(Request $request): Response
     {
         $templates = RecurringTransaction::where('user_id', $request->user()->id)
+            ->with('category')
             ->orderBy('created_at', 'desc')
             ->get();
 
