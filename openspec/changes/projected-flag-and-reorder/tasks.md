@@ -165,6 +165,7 @@ Every implementation task has a preceding test task (red-green-refactor).
 - Description: Import shadcn Switch component. Add "Marcar como proyectado" label + Switch below the Fecha field, wired to `form.is_projected`. On `resetForm`, default to `false`. On `populateFormForEdit`, read `movement.is_projected`. Transform to `0` or `1` in submit payload. Export `is_projected` in `MovementData` interface.
 - Verification: `npm run build` succeeds; manual page smoke check.
 - Est: 25 lines
+- Status: ✅ Done
 
 ### T016 — Movimientos/Index: split two sections + vuedraggable + drag handle + summary from reales
 - Type: implementation
@@ -179,6 +180,7 @@ Every implementation task has a preceding test task (red-green-refactor).
   Update `defineProps` to accept `realMovements` and `projectedMovements` arrays (rename `movements` prop).
 - Verification: `npm run build` succeeds; `npm run dev` smoke test drag row in each section.
 - Est: 120 lines
+- Status: ✅ Done
 
 ### T017 — Wayfinder regenerate
 - Type: tooling

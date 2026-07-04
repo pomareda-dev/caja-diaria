@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -9,7 +11,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { Switch } from '@/components/ui/switch';
 import movimientos from '@/routes/movimientos';
 
 export interface MovementData {
@@ -62,6 +63,7 @@ const form = useForm({
     category_id: 'none',
     amount: '',
     notes: '',
+    is_projected: false,
 });
 
 function resetForm() {
@@ -69,6 +71,7 @@ function resetForm() {
     form.clearErrors();
     transactionType.value = 'expense';
     displayAmount.value = '';
+    form.is_projected = false;
 }
 
 function populateFormForEdit(movement: MovementData) {
@@ -76,6 +79,7 @@ function populateFormForEdit(movement: MovementData) {
     form.description = movement.description;
     form.category_id = movement.category_id ? String(movement.category_id) : 'none';
     form.notes = movement.notes || '';
+    form.is_projected = movement.is_projected ?? false;
 
     if (movement.amount >= 0) {
         transactionType.value = 'income';
@@ -195,6 +199,18 @@ function submit() {
                         v-model="form.date"
                     />
                     <InputError :message="form.errors.date" />
+                </div>
+
+                <!-- Proyectado -->
+                <div class="flex items-center gap-3">
+                    <Switch
+                        id="is_projected"
+                        v-model="form.is_projected"
+                    />
+                    <Label for="is_projected" class="cursor-pointer">
+                        Marcar como proyectado
+                    </Label>
+                    <InputError :message="form.errors.is_projected" />
                 </div>
 
                 <!-- Descripción -->
