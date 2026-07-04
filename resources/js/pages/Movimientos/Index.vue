@@ -140,6 +140,18 @@ const summary = computed(() => {
     return { income, expense, closingBalance };
 });
 
+// Projected running balance: starts from the closing balance of real
+// movements and accumulates each projected movement's amount.
+const projectedBalances = computed(() => {
+    let balance = summary.value.closingBalance;
+
+    return props.projectedMovements.map((m) => {
+        balance += m.amount;
+
+        return balance;
+    });
+});
+
 function formatSign(value: number): string {
     if (value === 0) {
 return format(value);
@@ -360,6 +372,7 @@ return;
                             <TableHead>Movimiento</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead class="text-right">Cantidad</TableHead>
+                            <TableHead class="text-right">Proyección</TableHead>
                             <TableHead class="w-[80px]"></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -372,7 +385,7 @@ return;
                         :animation="150"
                         @end="onReorderProjected"
                     >
-                        <template #item="{ element: movement }">
+                        <template #item="{ element: movement, index }">
                             <TableRow class="group">
                                 <TableCell class="p-0 pl-2">
                                     <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
@@ -399,6 +412,9 @@ return;
                                     :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
                                 >
                                     {{ formatSigned(movement.amount) }}
+                                </TableCell>
+                                <TableCell class="text-right font-medium tabular-nums text-muted-foreground">
+                                    {{ format(projectedBalances[index]) }}
                                 </TableCell>
                                 <TableCell>
                                     <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -429,7 +445,7 @@ return;
                             <!-- Empty state for Proyectados -->
                             <TableRow v-if="projectedMovements.length === 0">
                                 <TableCell
-                                    colspan="6"
+                                    colspan="7"
                                     class="text-center py-8 text-muted-foreground"
                                 >
                                     No hay movimientos proyectados.
