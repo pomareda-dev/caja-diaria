@@ -5,6 +5,7 @@ import {
     BookOpen,
     FolderGit2,
     LayoutDashboard,
+    LineChart,
     Repeat,
     Tags,
     Wallet,
@@ -26,6 +27,7 @@ import { dashboard } from '@/routes';
 import categorias from '@/routes/categorias';
 import cuentas from '@/routes/cuentas';
 import movimientos from '@/routes/movimientos';
+import proyeccion from '@/routes/proyeccion';
 import recurrentes from '@/routes/recurrentes';
 import type { NavItem } from '@/types';
 
@@ -54,6 +56,11 @@ const mainNavItems: NavItem[] = [
         title: 'Recurrentes',
         href: recurrentes.index(),
         icon: Repeat,
+    },
+    {
+        title: 'Proyección',
+        href: proyeccion.index(),
+        icon: LineChart,
     },
 ];
 
