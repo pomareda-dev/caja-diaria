@@ -119,7 +119,10 @@ class ProjectionService
                         true,
                     );
 
-                    Movement::create([
+                    // forceCreate bypasses $fillable (user_id is intentionally
+                    // not mass-assignable; the relationship create path is used
+                    // by controllers, but this service only has the user id).
+                    Movement::forceCreate([
                         'user_id' => $userId,
                         'date' => $movementDate->toDateString(),
                         'description' => $description,

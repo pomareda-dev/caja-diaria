@@ -28,7 +28,6 @@ class Movement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'date',
         'description',
         'category_id',
