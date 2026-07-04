@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\RecurringTransactionController;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('movimientos', [MovementController::class, 'index'])->name('movimientos.index');
     Route::post('movimientos', [MovementController::class, 'store'])->name('movimientos.store');
