@@ -380,9 +380,9 @@ proyección a futuro.
 
 **Criterios de aceptación**
 
-- [ ] Creo una plantilla “Falabella, −300.96, día 5, por 24 meses” y se generan
+- [x] Creo una plantilla “Falabella, −300.96, día 5, por 24 meses” y se generan
   24 movimientos proyectados.
-- [ ] La vista de proyección muestra el balance esperado en cada fecha futura.
+- [x] La vista de proyección muestra el balance esperado en cada fecha futura.
 
 **Commits:** `feat: recurring transaction templates`,
 `feat: projection generation command`,
