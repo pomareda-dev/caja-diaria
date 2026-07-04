@@ -49,13 +49,20 @@ class ProjectionService
     {
         $horizonMonths ??= self::DEFAULT_HORIZON_MONTHS;
 
-        DB::transaction(function () use ($userId): void {
+        $generated = 0;
+
+        // Wrap delete + generate in ONE transaction so a generation failure
+        // rolls back the delete too (nested savepoint semantics apply since
+        // generateForUser opens its own DB::transaction).
+        DB::transaction(function () use ($userId, $horizonMonths, &$generated): void {
             Movement::where('user_id', $userId)
                 ->where('source', 'recurring')
                 ->delete();
+
+            $generated = $this->generateForUser($userId, $horizonMonths);
         });
 
-        return $this->generateForUser($userId, $horizonMonths);
+        return $generated;
     }
 
     /**
