@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/dialog';
 import {
     Table,
-    TableBody,
     TableCell,
     TableHead,
     TableHeader,
@@ -241,7 +240,7 @@ return;
         <!-- Reales Section -->
         <Card>
             <CardHeader class="pb-3">
-                <CardTitle class="text-base">Reales</CardTitle>
+                <CardTitle class="text-base">Actuales</CardTitle>
             </CardHeader>
             <CardContent class="p-0">
                 <Table>
@@ -256,91 +255,93 @@ return;
                             <TableHead class="w-[80px]"></TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
-                        <!-- Opening balance row -->
-                        <TableRow class="bg-muted/30">
-                            <TableCell></TableCell>
-                            <TableCell colspan="2" class="font-medium text-muted-foreground">
-                                Saldo inicial
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell class="text-right font-medium text-muted-foreground">
-                                {{ format(openingBalance) }}
-                            </TableCell>
-                            <TableCell class="text-right font-medium">
-                                {{ format(openingBalance) }}
-                            </TableCell>
-                            <TableCell></TableCell>
-                        </TableRow>
+                    <draggable
+                        :list="realMovements"
+                        item-key="id"
+                        tag="tbody"
+                        :class="'[&_tr:last-child]:border-0'"
+                        :handle="'.drag-handle'"
+                        :animation="150"
+                        @end="onReorderReales"
+                    >
+                        <template #header>
+                            <!-- Opening balance row -->
+                            <TableRow class="bg-muted/30">
+                                <TableCell></TableCell>
+                                <TableCell colspan="2" class="font-medium text-muted-foreground">
+                                    Saldo inicial
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell class="text-right font-medium text-muted-foreground">
+                                    {{ format(openingBalance) }}
+                                </TableCell>
+                                <TableCell class="text-right font-medium">
+                                    {{ format(openingBalance) }}
+                                </TableCell>
+                                <TableCell></TableCell>
+                            </TableRow>
+                        </template>
 
-                        <!-- Real movement rows (draggable) -->
-                        <draggable
-                            :list="realMovements"
-                            item-key="id"
-                            tag="tbody"
-                            :handle="'.drag-handle'"
-                            :animation="150"
-                            @end="onReorderReales"
-                        >
-                            <template #item="{ element: movement }">
-                                <TableRow class="group">
-                                    <TableCell class="p-0 pl-2">
-                                        <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                                    </TableCell>
-                                    <TableCell class="font-medium whitespace-nowrap">
-                                        {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
-                                    </TableCell>
-                                    <TableCell>
-                                        <span>{{ movement.description }}</span>
-                                    </TableCell>
-                                    <TableCell class="text-muted-foreground">
-                                        {{ movement.category_name ?? 'Sin categoría' }}
-                                    </TableCell>
-                                    <TableCell
-                                        class="text-right font-medium tabular-nums"
-                                        :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
-                                    >
-                                        {{ formatSigned(movement.amount) }}
-                                    </TableCell>
-                                    <TableCell class="text-right font-medium tabular-nums">
-                                        {{ format(movement.running_balance) }}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="size-8"
-                                                @click="openEdit(movement)"
-                                                aria-label="Editar movimiento"
-                                            >
-                                                <Pencil class="size-3.5" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                                @click="confirmDelete(movement)"
-                                                aria-label="Eliminar movimiento"
-                                            >
-                                                <Trash2 class="size-3.5" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            </template>
-                        </draggable>
+                        <template #item="{ element: movement }">
+                            <TableRow class="group">
+                                <TableCell class="p-0 pl-2">
+                                    <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                                </TableCell>
+                                <TableCell class="font-medium whitespace-nowrap">
+                                    {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
+                                </TableCell>
+                                <TableCell>
+                                    <span>{{ movement.description }}</span>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground">
+                                    {{ movement.category_name ?? 'Sin categoría' }}
+                                </TableCell>
+                                <TableCell
+                                    class="text-right font-medium tabular-nums"
+                                    :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                >
+                                    {{ formatSigned(movement.amount) }}
+                                </TableCell>
+                                <TableCell class="text-right font-medium tabular-nums">
+                                    {{ format(movement.running_balance) }}
+                                </TableCell>
+                                <TableCell>
+                                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8"
+                                            @click="openEdit(movement)"
+                                            aria-label="Editar movimiento"
+                                        >
+                                            <Pencil class="size-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                            @click="confirmDelete(movement)"
+                                            aria-label="Eliminar movimiento"
+                                        >
+                                            <Trash2 class="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </template>
 
-                        <!-- Empty state for Reales -->
-                        <TableRow v-if="realMovements.length === 0">
-                            <TableCell
-                                colspan="7"
-                                class="text-center py-8 text-muted-foreground"
-                            >
-                                No hay movimientos reales.
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
+                        <template #footer>
+                            <!-- Empty state for Reales -->
+                            <TableRow v-if="realMovements.length === 0">
+                                <TableCell
+                                    colspan="7"
+                                    class="text-center py-8 text-muted-foreground"
+                                >
+                                    No hay movimientos reales.
+                                </TableCell>
+                            </TableRow>
+                        </template>
+                    </draggable>
                 </Table>
             </CardContent>
         </Card>
@@ -362,79 +363,80 @@ return;
                             <TableHead class="w-[80px]"></TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
-                        <draggable
-                            :list="projectedMovements"
-                            item-key="id"
-                            tag="tbody"
-                            :handle="'.drag-handle'"
-                            :animation="150"
-                            @end="onReorderProjected"
-                        >
-                            <template #item="{ element: movement }">
-                                <TableRow class="group">
-                                    <TableCell class="p-0 pl-2">
-                                        <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                                    </TableCell>
-                                    <TableCell class="font-medium whitespace-nowrap">
-                                        {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div class="flex items-center gap-2">
-                                            <span>{{ movement.description }}</span>
-                                            <Badge
-                                                variant="outline"
-                                                class="text-amber-600 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950 text-[10px] px-1.5 py-0"
-                                            >
-                                                Proyectado
-                                            </Badge>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell class="text-muted-foreground">
-                                        {{ movement.category_name ?? 'Sin categoría' }}
-                                    </TableCell>
-                                    <TableCell
-                                        class="text-right font-medium tabular-nums"
-                                        :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
-                                    >
-                                        {{ formatSigned(movement.amount) }}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="size-8"
-                                                @click="openEdit(movement)"
-                                                aria-label="Editar movimiento"
-                                            >
-                                                <Pencil class="size-3.5" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                                @click="confirmDelete(movement)"
-                                                aria-label="Eliminar movimiento"
-                                            >
-                                                <Trash2 class="size-3.5" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            </template>
-                        </draggable>
+                    <draggable
+                        :list="projectedMovements"
+                        item-key="id"
+                        tag="tbody"
+                        :class="'[&_tr:last-child]:border-0'"
+                        :handle="'.drag-handle'"
+                        :animation="150"
+                        @end="onReorderProjected"
+                    >
+                        <template #item="{ element: movement }">
+                            <TableRow class="group">
+                                <TableCell class="p-0 pl-2">
+                                    <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                                </TableCell>
+                                <TableCell class="font-medium whitespace-nowrap">
+                                    {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
+                                </TableCell>
+                                <TableCell>
+                                    <div class="flex items-center gap-2">
+                                        <span>{{ movement.description }}</span>
+                                        <Badge
+                                            variant="outline"
+                                            class="text-amber-600 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950 text-[10px] px-1.5 py-0"
+                                        >
+                                            Proyectado
+                                        </Badge>
+                                    </div>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground">
+                                    {{ movement.category_name ?? 'Sin categoría' }}
+                                </TableCell>
+                                <TableCell
+                                    class="text-right font-medium tabular-nums"
+                                    :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                >
+                                    {{ formatSigned(movement.amount) }}
+                                </TableCell>
+                                <TableCell>
+                                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8"
+                                            @click="openEdit(movement)"
+                                            aria-label="Editar movimiento"
+                                        >
+                                            <Pencil class="size-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                            @click="confirmDelete(movement)"
+                                            aria-label="Eliminar movimiento"
+                                        >
+                                            <Trash2 class="size-3.5" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </template>
 
-                        <!-- Empty state for Proyectados -->
-                        <TableRow v-if="projectedMovements.length === 0">
-                            <TableCell
-                                colspan="6"
-                                class="text-center py-8 text-muted-foreground"
-                            >
-                                No hay movimientos proyectados.
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
+                        <template #footer>
+                            <!-- Empty state for Proyectados -->
+                            <TableRow v-if="projectedMovements.length === 0">
+                                <TableCell
+                                    colspan="6"
+                                    class="text-center py-8 text-muted-foreground"
+                                >
+                                    No hay movimientos proyectados.
+                                </TableCell>
+                            </TableRow>
+                        </template>
+                    </draggable>
                 </Table>
             </CardContent>
         </Card>
