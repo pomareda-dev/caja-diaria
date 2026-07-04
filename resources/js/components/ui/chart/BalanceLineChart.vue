@@ -120,7 +120,13 @@ const chartOptions = {
 </script>
 
 <template>
-    <div class="relative h-64 w-full">
+    <div
+        v-if="data.length === 0"
+        class="flex h-64 items-center justify-center text-sm text-muted-foreground"
+    >
+        No hay datos para este mes.
+    </div>
+    <div v-else class="relative h-64 w-full">
         <Line :data="chartData" :options="chartOptions" />
     </div>
 </template>

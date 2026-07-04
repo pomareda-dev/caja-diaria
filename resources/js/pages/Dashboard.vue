@@ -104,20 +104,20 @@ function goToToday() {
 // --- Progress bar helpers ---
 function progressPercentage(cat: BudgetCategory): number {
     if (!cat.monthly_limit || cat.monthly_limit <= 0) {
-return 0;
-}
+        return 0;
+    }
 
     return (cat.spent / cat.monthly_limit) * 100;
 }
 
 function progressColor(pct: number): string {
     if (pct > 100) {
-return 'bg-red-500';
-}
+        return 'bg-red-500';
+    }
 
     if (pct >= 75) {
-return 'bg-amber-500';
-}
+        return 'bg-amber-500';
+    }
 
     return 'bg-green-500';
 }
@@ -126,13 +126,6 @@ return 'bg-amber-500';
 function formatDate(dateStr: string): string {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-PE', {
         weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-    });
-}
-
-function formatShortDate(dateStr: string): string {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-PE', {
         day: 'numeric',
         month: 'short',
     });
@@ -278,6 +271,11 @@ function formatShortDate(dateStr: string): string {
                             <div class="flex items-center gap-3">
                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                     <div
+                                        role="progressbar"
+                                        :aria-valuenow="Math.round(progressPercentage(cat))"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        :aria-label="`Presupuesto ${cat.name}: ${Math.round(progressPercentage(cat))}% usado`"
                                         class="h-full rounded-full transition-all duration-300"
                                         :class="progressColor(progressPercentage(cat))"
                                         :style="{ width: Math.min(progressPercentage(cat), 100) + '%' }"

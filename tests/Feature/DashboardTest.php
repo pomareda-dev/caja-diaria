@@ -654,3 +654,83 @@ test('upcoming projections include is_projected flag', function () {
 
     Carbon::setTestNow();
 });
+
+// ─── Projection source semantics (per plan §3.2: projection = future date) ──
+
+test('projected end of month includes recurring source future movements', function () {
+    // Per plan §3.2 a movement is "projected" if date > today, regardless of source.
+    // Recurring-generated rows (source='recurring') are excluded from realBalance
+    // (which filters date<=today AND source IN manual,import AND is_projected=false),
+    // so they MUST be included by futureSum to be counted once in the projection.
+    // This test locks that behavior and prevents regressing to the inverse bug.
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Real today: 1000
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-01',
+        'amount' => 1000,
+        'source' => 'manual',
+    ]);
+
+    // Recurring-generated future payment: -200 on day 25
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-25',
+        'amount' => -200,
+        'source' => 'recurring',
+        'is_projected' => true,
+    ]);
+
+    $response = $this->get(route('dashboard', ['month' => '2026-07']));
+
+    // projectedEndOfMonth = 1000 + (-200) = 800, NOT 1000.
+    $response->assertInertia(fn ($page) => $page
+        ->where('cards.realBalance', 1000)
+        ->where('cards.projectedEndOfMonth', 800)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('reconciliation excludes other users accounts', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'BCP',
+        'balance' => 5000,
+        'exclude_from_reconciliation' => false,
+    ]);
+
+    // Other user's account must NOT leak into this user's reconciliation total.
+    Account::factory()->create([
+        'user_id' => $other->id,
+        'name' => 'Ajeno BCP',
+        'balance' => 100000,
+        'exclude_from_reconciliation' => false,
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-01',
+        'amount' => 5000,
+        'source' => 'manual',
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('reconciliation.totalAccounts', 5000)
+        ->where('reconciliation.reconciled', true)
+    );
+
+    Carbon::setTestNow();
+});
