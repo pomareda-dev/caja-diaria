@@ -18,30 +18,54 @@ const props = defineProps<{
     data: { date: string; balance: number }[];
 }>();
 
+// Canvas does not resolve CSS var() — read the resolved value from the DOM and
+// pass a concrete HSL/RGB string to Chart.js so addColorStop/borderColor work.
+function resolveToken(name: string, fallback: string): string {
+    if (typeof window === 'undefined') {
+        return fallback;
+    }
+    const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim();
+    return raw ? `hsl(${raw})` : fallback;
+}
+
+function resolveTokenWithAlpha(name: string, alpha: number, fallback: string): string {
+    if (typeof window === 'undefined') {
+        return fallback;
+    }
+    const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim();
+    return raw ? `hsl(${raw} / ${alpha})` : fallback;
+}
+
 const chartData = computed(() => ({
-    labels: props.data.map((d) => {
-        // Show only day number for compact labels
-        const day = d.date.split('-')[2];
-        // Show label every ~5 days or first day
-        return day;
-    }),
+    labels: props.data.map((d) => d.date.split('-')[2]),
     datasets: [
         {
             label: 'Balance',
             data: props.data.map((d) => d.balance),
-            borderColor: 'hsl(var(--primary))',
+            borderColor: resolveToken('--primary', 'hsl(0 0% 9%)'),
             backgroundColor: (ctx: any) => {
-                if (!ctx.chart.chartArea) {
-                    return;
+                const { chart } = ctx;
+                if (!chart.chartArea) {
+                    return resolveTokenWithAlpha('--primary', 0.3, 'hsl(0 0% 9% / 0.3)');
                 }
-                const gradient = ctx.chart.ctx.createLinearGradient(
+                const gradient = chart.ctx.createLinearGradient(
                     0,
-                    ctx.chart.chartArea.top,
+                    chart.chartArea.top,
                     0,
-                    ctx.chart.chartArea.bottom,
+                    chart.chartArea.bottom,
                 );
-                gradient.addColorStop(0, 'hsl(var(--primary) / 0.3)');
-                gradient.addColorStop(1, 'hsl(var(--primary) / 0.02)');
+                gradient.addColorStop(
+                    0,
+                    resolveTokenWithAlpha('--primary', 0.3, 'hsl(0 0% 9% / 0.3)'),
+                );
+                gradient.addColorStop(
+                    1,
+                    resolveTokenWithAlpha('--primary', 0.02, 'hsl(0 0% 9% / 0.02)'),
+                );
                 return gradient;
             },
             fill: true,
@@ -94,7 +118,7 @@ const chartOptions = {
         },
         y: {
             grid: {
-                color: 'hsl(var(--border) / 0.5)',
+                color: resolveTokenWithAlpha('--border', 0.5, 'hsl(0 0% 9% / 0.1)'),
             },
             ticks: {
                 maxTicksLimit: 6,
