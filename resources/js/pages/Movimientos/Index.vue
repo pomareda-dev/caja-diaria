@@ -69,6 +69,12 @@ const monthLabel = computed(() => {
 
 const isCurrentMonth = computed(() => props.selectedMonth === props.currentMonth);
 
+// Past month (before current): only "Actuales" shown — projected are future.
+const isPastMonth = computed(() => props.selectedMonth < props.currentMonth);
+
+// Future month (after current): only "Proyectados" shown — real haven't happened.
+const isFutureMonth = computed(() => props.selectedMonth > props.currentMonth);
+
 function navigateMonth(delta: number) {
     const date = new Date(selectedDate.value);
     date.setMonth(date.getMonth() + delta);
@@ -249,8 +255,8 @@ return;
             </Button>
         </div>
 
-        <!-- Reales Section -->
-        <Card>
+        <!-- Reales Section (hidden in future months — nothing has happened yet) -->
+        <Card v-if="!isFutureMonth">
             <CardHeader class="pb-3">
                 <CardTitle class="text-base">Actuales</CardTitle>
             </CardHeader>
@@ -358,8 +364,8 @@ return;
             </CardContent>
         </Card>
 
-        <!-- Proyectados Section -->
-        <Card>
+        <!-- Proyectados Section (hidden in past months — projections are future-only) -->
+        <Card v-if="!isPastMonth">
             <CardHeader class="pb-3">
                 <CardTitle class="text-base">Proyectados</CardTitle>
             </CardHeader>
