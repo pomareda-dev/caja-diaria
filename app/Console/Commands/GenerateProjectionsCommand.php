@@ -15,14 +15,14 @@ class GenerateProjectionsCommand extends Command
      */
     protected $signature = 'app:generate-projections
         {--horizon= : Number of months into the future (default: 12)}
-        {--user= : Regenerate for a specific user ID}';
+        {--user= : Generate for a specific user ID}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Generate projected movements from all active recurring templates';
+    protected $description = 'Genera movimientos proyectados para las plantillas recurrentes activas (idempotente: no duplica existentes)';
 
     /**
      * Execute the console command.
@@ -37,7 +37,7 @@ class GenerateProjectionsCommand extends Command
         $userId = $this->option('user');
         if ($userId !== null) {
             $userId = (int) $userId;
-            $count = $projectionService->regenerateForUser($userId, $horizonMonths);
+            $count = $projectionService->generateForUser($userId, $horizonMonths);
             $this->info("Generated {$count} projected movements for user #{$userId}.");
 
             return self::SUCCESS;
@@ -47,7 +47,7 @@ class GenerateProjectionsCommand extends Command
         $total = 0;
 
         foreach ($users as $user) {
-            $count = $projectionService->regenerateForUser($user->id, $horizonMonths);
+            $count = $projectionService->generateForUser($user->id, $horizonMonths);
             $total += $count;
             $this->info("User #{$user->id}: {$count} projected movements.");
         }

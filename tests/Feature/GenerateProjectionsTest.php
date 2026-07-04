@@ -309,5 +309,12 @@ test('generate projections artisan command works', function () {
         'description' => 'Falabella',
     ]);
 
+    // Running again must NOT duplicate (command is idempotent / non-destructive)
+    $this->artisan('app:generate-projections')
+        ->expectsOutputToContain('0 projected movements')
+        ->assertExitCode(0);
+
+    expect(Movement::where('user_id', $user->id)->where('source', 'recurring')->count())->toBe(3);
+
     Carbon::setTestNow();
 });
