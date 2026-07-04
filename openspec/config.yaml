@@ -1,0 +1,62 @@
+schema: spec-driven
+
+context: |
+  Project: caja-diaria (Laravel Vue Starter Kit fork)
+  Tech stack: PHP 8.3, Laravel 13.17, Inertia Laravel v3, Vue 3.5, Tailwind CSS v4.1, Vite 8, MySQL
+  Frontend: Inertia.js v3 with Vue 3 Composition API, Wayfinder for typed routes, shadcn/ui components, reka-ui, @tanstack/vue-table
+  Auth: Laravel Fortify v1.37
+  Testing: Pest 4.7 with pest-plugin-laravel, PHPUnit 12 via phpunit.xml
+  Quality: Laravel Pint v1.27, PHPStan (Larastan) v3.9, ESLint v9, Prettier v3, vue-tsc
+  Architecture: Standard Laravel MVC with Form Requests, Eloquent models, policies, factories, seeders
+  Conventions:
+    - Controllers under 10 lines delegate to actions/services; manual route definitions (not Route::resource)
+    - Form Request classes with `prepareForValidation()` for default values (e.g. sort_order empty string → 0)
+    - Models use `casts()` method, `HasFactory`, PHPDoc @property blocks
+    - User model uses PHP 8 attributes `#[Fillable]` and `#[Hidden]`
+    - Spanish route names: cuentas, categorias, movimientos, recurrentes
+    - Pest tests use `test()` function (not `it()`), `uses(RefreshDatabase::class)` per file
+    - Inertia assertions via `assertInertia(fn ($page) => ...)`
+    - MySQL testing database auto-created in tests/Pest.php `beforeAll` via PDO
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Spanish UI labels match existing project convention
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Maintain Spanish route naming convention
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+    - Follow existing sort_order + prepareForValidation pattern for ordered resources
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Prefer `php artisan make:test --pest {name}` for new tests
+  apply:
+    - Follow existing code patterns: Form Requests, Inertia responses, flash toast pattern
+    tdd: true
+    test_command: "php artisan test --compact"
+  verify:
+    test_command: "php artisan test --compact"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  runner: pest
+  command: "php artisan test --compact"
+  strict_tdd: true
+  suites:
+    - Unit: tests/Unit
+    - Feature: tests/Feature
+  coverage: false
+  browser: false
+  layers:
+    - unit
+    - feature
+  linter: "pint --parallel"
+  type_checker: "phpstan analyse"
+  formatter: "prettier --write resources/"
