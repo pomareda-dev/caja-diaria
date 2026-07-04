@@ -29,6 +29,17 @@ class MovementController extends Controller
             $request->user()->id
         );
 
+        // Projected opening for the month: running projection must be continuous with
+        // the previous month's projected closing. Starts from today's real balance and
+        // adds every future-dated movement before the month starts (regardless of the
+        // is_projected flag, since date>today makes them projected in the UI).
+        $realBalanceToday = (float) Movement::realBalance($request->user()->id);
+        $projectedBeforeMonth = (float) Movement::where('user_id', $request->user()->id)
+            ->where('date', '>', Carbon::now()->toDateString())
+            ->where('date', '<', $selectedMonth->copy()->startOfMonth()->toDateString())
+            ->sum('amount');
+        $projectedOpeningBalance = $realBalanceToday + $projectedBeforeMonth;
+
         $movements = Movement::forMonth($selectedMonth)
             ->where('user_id', $request->user()->id)
             ->orderBy('date')
@@ -82,6 +93,7 @@ class MovementController extends Controller
             'categories' => $categories,
             'selectedMonth' => $selectedMonth->format('Y-m'),
             'openingBalance' => (float) $openingBalance,
+            'projectedOpeningBalance' => $projectedOpeningBalance,
             'currentMonth' => Carbon::now()->format('Y-m'),
         ]);
     }

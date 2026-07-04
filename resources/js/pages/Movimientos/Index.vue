@@ -37,6 +37,7 @@ const props = defineProps<{
     categories: CategoryData[];
     selectedMonth: string;
     openingBalance: number;
+    projectedOpeningBalance: number;
     currentMonth: string;
 }>();
 
@@ -146,10 +147,12 @@ const summary = computed(() => {
     return { income, expense, closingBalance };
 });
 
-// Projected running balance: starts from the closing balance of real
-// movements and accumulates each projected movement's amount.
+// Projected running balance: starts from the projected opening (continuous with
+// the previous month's projected closing) and accumulates each projected movement.
+// For the current month this equals the real closing; for future months it carries
+// the projection forward instead of restarting from the real-only opening.
 const projectedBalances = computed(() => {
-    let balance = summary.value.closingBalance;
+    let balance = props.projectedOpeningBalance;
 
     return props.projectedMovements.map((m) => {
         balance += m.amount;
