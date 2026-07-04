@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\MovementController;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +21,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.update');
     Route::patch('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.patch');
     Route::delete('categorias/{category}', [CategoryController::class, 'destroy'])->name('categorias.destroy');
-    Route::inertia('cuentas', 'Cuentas/Index')->name('cuentas.index');
+    Route::get('cuentas', [AccountController::class, 'index'])->name('cuentas.index');
+    Route::post('cuentas', [AccountController::class, 'store'])->name('cuentas.store');
+    Route::put('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.update');
+    Route::patch('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.patch');
+    Route::delete('cuentas/{account}', [AccountController::class, 'destroy'])->name('cuentas.destroy');
     Route::inertia('recurrentes', 'Recurrentes/Index')->name('recurrentes.index');
 });
 
