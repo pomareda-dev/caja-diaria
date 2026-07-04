@@ -10,6 +10,7 @@ export function useCurrency() {
 
     const formatSigned = (amount: number): string => {
         const formatted = format(Math.abs(amount));
+
         return amount < 0 ? `-${formatted}` : `+${formatted}`;
     };
 

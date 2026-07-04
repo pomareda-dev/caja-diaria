@@ -22,11 +22,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { dashboard } from '@/routes';
 import categorias from '@/routes/categorias';
 import cuentas from '@/routes/cuentas';
 import movimientos from '@/routes/movimientos';
 import recurrentes from '@/routes/recurrentes';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [

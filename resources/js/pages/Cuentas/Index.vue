@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Plus, Pencil, Trash2, CheckCircle2, AlertTriangle } from '@lucide/vue';
-import { useCurrency } from '@/composables/useCurrency';
-import { Button } from '@/components/ui/button';
+import { ref, computed } from 'vue';
+import AccountDialog from '@/components/accounts/AccountDialog.vue';
+import type { AccountData } from '@/components/accounts/AccountDialog.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -12,6 +13,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Table,
     TableBody,
@@ -22,16 +31,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import AccountDialog from '@/components/accounts/AccountDialog.vue';
-import type { AccountData } from '@/components/accounts/AccountDialog.vue';
+import { useCurrency } from '@/composables/useCurrency';
 import cuentas from '@/routes/cuentas';
 
 const props = defineProps<{
@@ -96,7 +96,9 @@ function confirmDelete(account: AccountData) {
 }
 
 function executeDelete() {
-    if (!deleteTarget.value) return;
+    if (!deleteTarget.value) {
+return;
+}
 
     router.delete(cuentas.destroy.url(deleteTarget.value.id), {
         preserveScroll: true,

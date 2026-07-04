@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from '@lucide/vue';
-import { useCurrency } from '@/composables/useCurrency';
-import { Button } from '@/components/ui/button';
+import { ref, computed } from 'vue';
+import CategoryDialog from '@/components/categories/CategoryDialog.vue';
+import type { CategoryData } from '@/components/categories/CategoryDialog.vue';
 import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -21,8 +14,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import CategoryDialog from '@/components/categories/CategoryDialog.vue';
-import type { CategoryData } from '@/components/categories/CategoryDialog.vue';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { useCurrency } from '@/composables/useCurrency';
 import categorias from '@/routes/categorias';
 
 const props = defineProps<{
@@ -47,6 +47,7 @@ const { format } = useCurrency();
 // --- Month navigation ---
 const selectedDate = computed(() => {
     const [year, month] = props.selectedMonth.split('-').map(Number);
+
     return new Date(year, month - 1, 1);
 });
 
@@ -89,13 +90,22 @@ const kindBadgeVariant: Record<string, string> = {
 };
 
 function progressPercentage(cat: CategoryData): number {
-    if (!cat.monthly_limit || cat.monthly_limit <= 0) return 0;
+    if (!cat.monthly_limit || cat.monthly_limit <= 0) {
+return 0;
+}
+
     return (cat.spent / cat.monthly_limit) * 100;
 }
 
 function progressColor(pct: number): string {
-    if (pct > 100) return 'bg-red-500';
-    if (pct >= 75) return 'bg-amber-500';
+    if (pct > 100) {
+return 'bg-red-500';
+}
+
+    if (pct >= 75) {
+return 'bg-amber-500';
+}
+
     return 'bg-green-500';
 }
 
@@ -121,7 +131,9 @@ function confirmDelete(category: CategoryData) {
 }
 
 function executeDelete() {
-    if (!deleteTarget.value) return;
+    if (!deleteTarget.value) {
+return;
+}
 
     router.delete(categorias.destroy.url(deleteTarget.value.id), {
         preserveScroll: true,
