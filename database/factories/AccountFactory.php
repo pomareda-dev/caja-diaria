@@ -31,8 +31,38 @@ class AccountFactory extends Factory
             'name' => fake()->randomElement($names[$kind]).' '.fake()->numberBetween(1000, 9999),
             'kind' => $kind,
             'balance' => fake()->randomFloat(2, -1000, 50000),
-            'exclude_from_reconciliation' => $kind === 'credit' ? fake()->boolean(20) : fake()->boolean(5),
+            'exclude_from_reconciliation' => false,
             'sort_order' => fake()->numberBetween(0, 20),
         ];
+    }
+
+    /**
+     * Mark the account as excluded from reconciliation.
+     */
+    public function excluded(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'exclude_from_reconciliation' => true,
+        ]);
+    }
+
+    /**
+     * Set a fixed balance.
+     */
+    public function withBalance(float $balance): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'balance' => $balance,
+        ]);
+    }
+
+    /**
+     * Set a specific kind.
+     */
+    public function ofKind(string $kind): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'kind' => $kind,
+        ]);
     }
 }

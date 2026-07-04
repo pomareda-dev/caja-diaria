@@ -87,4 +87,18 @@ class Movement extends Model
 
         return number_format((float) ($sum ?? 0), 2, '.', '');
     }
+
+    /**
+     * Calculate the real balance up to today for a user.
+     * Sums all real (manual, import) movements with date <= today.
+     */
+    public static function realBalance(int $userId): string
+    {
+        $sum = static::where('user_id', $userId)
+            ->where('date', '<=', now()->toDateString())
+            ->whereIn('source', ['manual', 'import'])
+            ->sum('amount');
+
+        return number_format((float) ($sum ?? 0), 2, '.', '');
+    }
 }
