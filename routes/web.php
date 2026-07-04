@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('movimientos', [MovementController::class, 'index'])->name('movimientos.index');
     Route::post('movimientos', [MovementController::class, 'store'])->name('movimientos.store');
+    Route::patch('movimientos/reorder', [MovementController::class, 'reorder'])->name('movimientos.reorder');
     Route::put('movimientos/{movement}', [MovementController::class, 'update'])->name('movimientos.update');
     Route::patch('movimientos/{movement}', [MovementController::class, 'update'])->name('movimientos.patch');
     Route::delete('movimientos/{movement}', [MovementController::class, 'destroy'])->name('movimientos.destroy');

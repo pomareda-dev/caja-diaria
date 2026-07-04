@@ -35,6 +35,8 @@ class Movement extends Model
         'source',
         'recurring_id',
         'notes',
+        'is_projected',
+        'sort_order',
     ];
 
     protected function casts(): array
@@ -42,6 +44,8 @@ class Movement extends Model
         return [
             'date' => 'date',
             'amount' => 'decimal:2',
+            'is_projected' => 'boolean',
+            'sort_order' => 'integer',
         ];
     }
 
@@ -83,6 +87,7 @@ class Movement extends Model
         $sum = static::where('user_id', $userId)
             ->where('date', '<', $monthStart->toDateString())
             ->whereIn('source', ['manual', 'import'])
+            ->where('is_projected', false)
             ->sum('amount');
 
         return number_format((float) ($sum ?? 0), 2, '.', '');
@@ -92,11 +97,20 @@ class Movement extends Model
      * Calculate the real balance up to today for a user.
      * Sums all real (manual, import) movements with date <= today.
      */
+    public static function nextSortOrder(int $userId, string $date, bool $isProjected): int
+    {
+        return (int) static::where('user_id', $userId)
+            ->where('date', $date)
+            ->where('is_projected', $isProjected)
+            ->max('sort_order') + 1;
+    }
+
     public static function realBalance(int $userId): string
     {
         $sum = static::where('user_id', $userId)
             ->where('date', '<=', now()->toDateString())
             ->whereIn('source', ['manual', 'import'])
+            ->where('is_projected', false)
             ->sum('amount');
 
         return number_format((float) ($sum ?? 0), 2, '.', '');

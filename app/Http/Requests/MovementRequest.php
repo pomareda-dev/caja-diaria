@@ -16,6 +16,18 @@ class MovementRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'is_projected' => $this->input('is_projected') === null || $this->input('is_projected') === ''
+                ? 0
+                : (int) $this->input('is_projected'),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, array<mixed>|string>
@@ -28,6 +40,8 @@ class MovementRequest extends FormRequest
             'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $this->user()->id)],
             'amount' => ['required', 'numeric', 'not_in:0'],
             'notes' => ['nullable', 'string'],
+            'is_projected' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer'],
         ];
     }
 }
