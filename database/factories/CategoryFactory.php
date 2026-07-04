@@ -33,4 +33,34 @@ class CategoryFactory extends Factory
             'sort_order' => fake()->numberBetween(0, 20),
         ];
     }
+
+    /**
+     * Indicate that the category is an expense kind.
+     */
+    public function expense(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'kind' => 'expense',
+        ]);
+    }
+
+    /**
+     * Indicate that the category has a specific monthly limit.
+     */
+    public function withLimit(float $limit = 500.00): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'monthly_limit' => (string) $limit,
+        ]);
+    }
+
+    /**
+     * Indicate that the category has no monthly limit.
+     */
+    public function withoutLimit(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'monthly_limit' => null,
+        ]);
+    }
 }
