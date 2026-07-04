@@ -57,7 +57,7 @@ const emit = defineEmits<{
 const form = useForm({
     name: '',
     amount: '',
-    category_id: '',
+    category_id: 'none',
     day_of_month: '',
     start_month: '',
     end_month: '',
@@ -72,7 +72,7 @@ function resetForm() {
 function populateFormForEdit(template: RecurringData) {
     form.name = template.name;
     form.amount = String(template.amount);
-    form.category_id = template.category_id !== null ? String(template.category_id) : '';
+    form.category_id = template.category_id !== null ? String(template.category_id) : 'none';
     form.day_of_month = String(template.day_of_month);
     form.start_month = template.start_month;
     form.end_month = template.end_month || '';
@@ -103,6 +103,12 @@ function closeDialog() {
 }
 
 function submit() {
+    form.transform((data) => ({
+        ...data,
+        category_id:
+            data.category_id === 'none' ? null : Number(data.category_id),
+    }));
+
     const options = {
         preserveScroll: true,
         onSuccess: () => {
@@ -173,7 +179,7 @@ function submit() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
-                                <SelectItem :value="''">
+                                <SelectItem value="none">
                                     Sin categoría
                                 </SelectItem>
                                 <SelectItem
