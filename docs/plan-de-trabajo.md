@@ -349,9 +349,9 @@ límite (equivalente a cols F–H).
 
 **Criterios de aceptación**
 
-- [ ] Registro las cuentas y sus saldos y el total coincide con el balance real
+- [x] Registro las cuentas y sus saldos y el total coincide con el balance real
   → veo ✅.
-- [ ] Si cambio un saldo y ya no coincide → veo el descuadre exacto.
+- [x] Si cambio un saldo y ya no coincide → veo el descuadre exacto.
 
 **Commits:** `feat: account crud with balances`,
 `feat: reconciliation panel`,
