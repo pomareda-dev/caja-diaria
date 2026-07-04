@@ -3,6 +3,8 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\MovementController;
+use App\Http\Controllers\ProjectionController;
+use App\Http\Controllers\RecurringTransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -27,7 +29,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.update');
     Route::patch('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.patch');
     Route::delete('cuentas/{account}', [AccountController::class, 'destroy'])->name('cuentas.destroy');
-    Route::inertia('recurrentes', 'Recurrentes/Index')->name('recurrentes.index');
+
+    // Recurring transactions
+    Route::get('recurrentes', [RecurringTransactionController::class, 'index'])->name('recurrentes.index');
+    Route::post('recurrentes', [RecurringTransactionController::class, 'store'])->name('recurrentes.store');
+    Route::put('recurrentes/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurrentes.update');
+    Route::patch('recurrentes/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurrentes.patch');
+    Route::delete('recurrentes/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurrentes.destroy');
+    Route::post('recurrentes/regenerate', [RecurringTransactionController::class, 'regenerate'])->name('recurrentes.regenerate');
+
+    // Projection view
+    Route::get('proyeccion', [ProjectionController::class, 'index'])->name('proyeccion.index');
 });
 
 require __DIR__.'/settings.php';
