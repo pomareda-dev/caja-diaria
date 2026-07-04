@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\MovementController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,7 +15,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('movimientos/{movement}', [MovementController::class, 'update'])->name('movimientos.patch');
     Route::delete('movimientos/{movement}', [MovementController::class, 'destroy'])->name('movimientos.destroy');
 
-    Route::inertia('categorias', 'Categorias/Index')->name('categorias.index');
+    Route::get('categorias', [CategoryController::class, 'index'])->name('categorias.index');
+    Route::post('categorias', [CategoryController::class, 'store'])->name('categorias.store');
+    Route::put('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.update');
+    Route::patch('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.patch');
+    Route::delete('categorias/{category}', [CategoryController::class, 'destroy'])->name('categorias.destroy');
     Route::inertia('cuentas', 'Cuentas/Index')->name('cuentas.index');
     Route::inertia('recurrentes', 'Recurrentes/Index')->name('recurrentes.index');
 });
