@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\MovementController::index
 * @see app/Http/Controllers/MovementController.php:20
@@ -44,6 +44,43 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 })
 
 /**
+* @see \App\Http\Controllers\MovementController::index
+* @see app/Http/Controllers/MovementController.php:20
+* @route '/movimientos'
+*/
+const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::index
+* @see app/Http/Controllers/MovementController.php:20
+* @route '/movimientos'
+*/
+indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url(options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::index
+* @see app/Http/Controllers/MovementController.php:20
+* @route '/movimientos'
+*/
+indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: index.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+index.form = indexForm
+
+/**
 * @see \App\Http\Controllers\MovementController::store
 * @see app/Http/Controllers/MovementController.php:104
 * @route '/movimientos'
@@ -78,6 +115,28 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 })
 
 /**
+* @see \App\Http\Controllers\MovementController::store
+* @see app/Http/Controllers/MovementController.php:104
+* @route '/movimientos'
+*/
+const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::store
+* @see app/Http/Controllers/MovementController.php:104
+* @route '/movimientos'
+*/
+storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: store.url(options),
+    method: 'post',
+})
+
+store.form = storeForm
+
+/**
 * @see \App\Http\Controllers\MovementController::reorder
 * @see app/Http/Controllers/MovementController.php:180
 * @route '/movimientos/reorder'
@@ -110,6 +169,38 @@ reorder.patch = (options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: reorder.url(options),
     method: 'patch',
 })
+
+/**
+* @see \App\Http\Controllers\MovementController::reorder
+* @see app/Http/Controllers/MovementController.php:180
+* @route '/movimientos/reorder'
+*/
+const reorderForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: reorder.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::reorder
+* @see app/Http/Controllers/MovementController.php:180
+* @route '/movimientos/reorder'
+*/
+reorderForm.patch = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: reorder.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+reorder.form = reorderForm
 
 /**
 * @see \App\Http\Controllers\MovementController::update
@@ -170,6 +261,38 @@ update.put = (args: { movement: number | { id: number } } | [movement: number | 
 })
 
 /**
+* @see \App\Http\Controllers\MovementController::update
+* @see app/Http/Controllers/MovementController.php:128
+* @route '/movimientos/{movement}'
+*/
+const updateForm = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::update
+* @see app/Http/Controllers/MovementController.php:128
+* @route '/movimientos/{movement}'
+*/
+updateForm.put = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: update.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PUT',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+update.form = updateForm
+
+/**
 * @see \App\Http\Controllers\MovementController::patch
 * @see app/Http/Controllers/MovementController.php:128
 * @route '/movimientos/{movement}'
@@ -228,6 +351,38 @@ patch.patch = (args: { movement: number | { id: number } } | [movement: number |
 })
 
 /**
+* @see \App\Http\Controllers\MovementController::patch
+* @see app/Http/Controllers/MovementController.php:128
+* @route '/movimientos/{movement}'
+*/
+const patchForm = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: patch.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::patch
+* @see app/Http/Controllers/MovementController.php:128
+* @route '/movimientos/{movement}'
+*/
+patchForm.patch = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: patch.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'PATCH',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+patch.form = patchForm
+
+/**
 * @see \App\Http\Controllers\MovementController::destroy
 * @see app/Http/Controllers/MovementController.php:161
 * @route '/movimientos/{movement}'
@@ -284,6 +439,38 @@ destroy.delete = (args: { movement: number | { id: number } } | [movement: numbe
     url: destroy.url(args, options),
     method: 'delete',
 })
+
+/**
+* @see \App\Http\Controllers\MovementController::destroy
+* @see app/Http/Controllers/MovementController.php:161
+* @route '/movimientos/{movement}'
+*/
+const destroyForm = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+/**
+* @see \App\Http\Controllers\MovementController::destroy
+* @see app/Http/Controllers/MovementController.php:161
+* @route '/movimientos/{movement}'
+*/
+destroyForm.delete = (args: { movement: number | { id: number } } | [movement: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
+    action: destroy.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'DELETE',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'post',
+})
+
+destroy.form = destroyForm
 
 const movimientos = {
     index: Object.assign(index, index),
