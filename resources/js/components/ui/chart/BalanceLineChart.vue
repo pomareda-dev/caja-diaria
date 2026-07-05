@@ -18,26 +18,35 @@ const props = defineProps<{
     data: { date: string; balance: number }[];
 }>();
 
-// Canvas does not resolve CSS var() — read the resolved value from the DOM and
-// pass a concrete HSL/RGB string to Chart.js so addColorStop/borderColor work.
-function resolveToken(name: string, fallback: string): string {
+// Canvas does not resolve CSS var() — and this project's tokens store
+// `hsl(...)` literals (not bare H S L triplets), so wrapping them again
+// produces `hsl(hsl(...))` which addColorStop rejects. Use the dummy-element
+// trick: set `color: var(--token)` on a hidden node and read the computed
+// value back, which the browser normalises to `rgb(r, g, b)`. Then convert to
+// `rgba()` for alpha. This works regardless of how the variable is declared.
+function resolveTokenColor(name: string, fallback: string): string {
     if (typeof window === 'undefined') {
         return fallback;
     }
-    const raw = getComputedStyle(document.documentElement)
-        .getPropertyValue(name)
-        .trim();
-    return raw ? `hsl(${raw})` : fallback;
+    const el = document.createElement('div');
+    el.style.color = `var(${name})`;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    const resolved = getComputedStyle(el).color;
+    document.body.removeChild(el);
+    return resolved || fallback;
 }
 
 function resolveTokenWithAlpha(name: string, alpha: number, fallback: string): string {
-    if (typeof window === 'undefined') {
+    const rgb = resolveTokenColor(name, '');
+    if (!rgb) {
         return fallback;
     }
-    const raw = getComputedStyle(document.documentElement)
-        .getPropertyValue(name)
-        .trim();
-    return raw ? `hsl(${raw} / ${alpha})` : fallback;
+    const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (match) {
+        return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})`;
+    }
+    return fallback;
 }
 
 const chartData = computed(() => ({
@@ -46,11 +55,11 @@ const chartData = computed(() => ({
         {
             label: 'Balance',
             data: props.data.map((d) => d.balance),
-            borderColor: resolveToken('--primary', 'hsl(0 0% 9%)'),
+            borderColor: resolveTokenColor('--primary', 'rgb(23, 23, 23)'),
             backgroundColor: (ctx: any) => {
                 const { chart } = ctx;
                 if (!chart.chartArea) {
-                    return resolveTokenWithAlpha('--primary', 0.3, 'hsl(0 0% 9% / 0.3)');
+                    return resolveTokenWithAlpha('--primary', 0.3, 'rgba(23, 23, 23, 0.3)');
                 }
                 const gradient = chart.ctx.createLinearGradient(
                     0,
@@ -60,11 +69,11 @@ const chartData = computed(() => ({
                 );
                 gradient.addColorStop(
                     0,
-                    resolveTokenWithAlpha('--primary', 0.3, 'hsl(0 0% 9% / 0.3)'),
+                    resolveTokenWithAlpha('--primary', 0.3, 'rgba(23, 23, 23, 0.3)'),
                 );
                 gradient.addColorStop(
                     1,
-                    resolveTokenWithAlpha('--primary', 0.02, 'hsl(0 0% 9% / 0.02)'),
+                    resolveTokenWithAlpha('--primary', 0.02, 'rgba(23, 23, 23, 0.02)'),
                 );
                 return gradient;
             },
@@ -118,7 +127,7 @@ const chartOptions = {
         },
         y: {
             grid: {
-                color: resolveTokenWithAlpha('--border', 0.5, 'hsl(0 0% 9% / 0.1)'),
+                color: resolveTokenWithAlpha('--border', 0.5, 'rgba(23, 23, 23, 0.1)'),
             },
             ticks: {
                 maxTicksLimit: 6,
