@@ -407,7 +407,7 @@ proyección a futuro.
 
 **Criterios de aceptación**
 
-- [ ] Al abrir la app veo el estado financiero del mes de un vistazo.
+- [x] Al abrir la app veo el estado financiero del mes de un vistazo.
 
 **Commits:** `feat: dashboard with monthly summary cards`,
 `feat: budget overview and upcoming projections`,
