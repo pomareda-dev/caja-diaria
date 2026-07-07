@@ -34,8 +34,10 @@ Construir un sistema sencillo que replique —y mejore— las capacidades actual
   los datos.
 - Una sola línea temporal de movimientos (real + proyectado + recurrente).
 - CRUD de movimientos, categorías, cuentas y pagos recurrentes.
-- Importación del historial existente desde el Excel.
 - Dashboard con métricas clave del mes y proyección.
+- **Personalización de la app:** paleta de colores (8 opciones incluyendo
+  rosado), foto de perfil, densidad de tablas, sección de inicio, día de inicio
+  de semana y horizonte de proyección.
 - **Moneda única: PEN (soles).** Sin multi-moneda ni conversiones.
 - **Cuentas como snapshot manual de saldos**, sin vínculo movimiento↔cuenta (igual
   que en la planilla actual).
@@ -48,8 +50,10 @@ Construir un sistema sencillo que replique —y mejore— las capacidades actual
 - Presupuestos anuales o por quincena.
 - Exportación a PDF/Excel (se puede añadir después fácilmente).
 - **Gestión específica de la cuenta “Liquidación”** — el usuario tiene otros
-  planes para ese fondo; por ahora solo se importa y se **excluye de la
+  planes para ese fondo; por ahora solo se crea manualmente y se **excluye de la
   conciliación**.
+- **Importación desde Excel** (descartado por el usuario: no se necesita migrar
+  datos históricos; la Fase 8 original se reemplaza por personalización).
 - Despliegue a producción (futuro: shared hosting bajo un subdominio nuevo de
   `pomareda.dev`, gestionado por el usuario).
 
@@ -124,7 +128,7 @@ local mono-usuario.
 
 ```
 users
-  id, name, email, password, timestamps
+  id, name, email, password, settings (json NULL), timestamps
 
 categories
   id, user_id (FK), name, kind (enum: expense|income|transfer),
@@ -415,40 +419,89 @@ proyección a futuro.
 
 ---
 
-### Fase 8 — Migración de datos históricos
+### Fase 8 — Personalización y preferencias
 
-**Objetivo:** importar el historial de `proyeccion-2026.xlsx` para no perder los
-2 años de registros.
+**Objetivo:** permitir al usuario personalizar la apariencia y el comportamiento
+de la app: paleta de colores (8 opciones, incluyendo rosado), foto de perfil,
+densidad de tablas, sección de inicio, día de inicio de semana y horizonte de
+proyección. Evita el look “todo blanco con líneas negras” del light mode por
+defecto.
 
 **Tareas**
 
-1. Comando Artisan `app:import:excel {file}` que lee el `.xlsx` con
-   `phpoffice/phpspreadsheet`.
-2. Por cada hoja mensual:
-   - Insertar movimientos de las cols A–D (fecha, descripción, categoría,
-     importe).
-   - Mapear categorías existentes a la tabla `categories` (crear las que falten).
-   - Omitir la fila “Capital” (se recalcula) o registrarla como movimiento de
-     apertura etiquetado.
-   - Marcar `source=import`.
-3. Importar cuentas de cols J–K (snapshot de la última hoja).
-4. Importar límites de categoría de col H.
-5. Reporte de importación: cantidad de filas, omisiones, advertencias.
-6. **Decisión:** los pagos recurrentes sin fecha (Huancayo 22, etc.) se importan
-   como plantillas recurrentes si se detecta el patrón, o como movimientos
-   proyectados sin fecha concreta etiquetados para revisión.
-7. Tests del importer con un fixture reducido.
+1. **Migración:** añadir columna `settings` (JSON, nullable) a la tabla `users`.
+   Cast como `array` en el modelo `User`
+   (`$casts = ['settings' => 'array']`).
+2. **Theming con 8 paletas:**
+   - Definir 8 paletas como sets de CSS variables en `resources/css/app.css`,
+     cada una con su class: `theme-slate`, `theme-rose`, `theme-blue`,
+     `theme-green`, `theme-amber`, `theme-violet`, `theme-teal`, `theme-red`.
+   - Cada paleta redefine `--primary`, `--background`, `--foreground`,
+     `--accent`, etc., en sus variantes light **y** dark (la paleta es ortogonal
+     al toggle light/dark existente).
+   - Extender el composable `useAppearance` para aplicar el class de paleta al
+     `<html>` además del `dark` existente.
+   - Persistir la paleta en `settings.theme` (guardar el KEY, no colores
+     crudos): al cargar la app, el servidor pasa `settings.theme` al frontend;
+     al cambiar, se persiste vía endpoint.
+3. **Endpoint de settings:** `PUT /settings` que valida y persiste el JSON en
+   `users.settings`. Validación server-side de claves permitidas:
+   - `theme` ∈ {slate, rose, blue, green, amber, violet, teal, red}
+   - `density` ∈ {compact, comfortable}
+   - `start_section` ∈ {dashboard, movements, categories, accounts, recurring}
+   - `week_start` ∈ {monday, sunday}
+   - `projection_horizon` ∈ entero 1–24 (meses)
+   - `avatar_path` (string, nullable; solo lo setea el upload de foto)
+4. **UI de personalización** (extender `settings/Appearance.vue` o nueva página
+   `settings/Preferences.vue`):
+   - Selector de paleta: 8 swatches visuales con preview.
+   - Upload de foto de perfil con preview y validación client-side.
+   - Toggle de densidad (compacta/cómoda).
+   - Select de sección de inicio.
+   - Select de día de inicio de semana (lunes/domingo).
+   - Input numérico para horizonte de proyección (meses).
+5. **Foto de perfil:**
+   - Controller `UserProfilePhotoController` (o action en `ProfileController`)
+     que recibe upload, valida imagen (mime jpg/png/webp, size ≤ 2MB), almacena
+     en `storage/app/public/avatars/{user_id}.{ext}`, guarda path en
+     `settings.avatar_path`.
+   - Mostrar avatar en el layout (header/sidebar) con fallback a iniciales.
+   - `php artisan storage:link` si no está creado el symlink público.
+6. **Aplicar preferences en runtime:**
+   - Composable `useSettings` que lee los settings del user (vía Inertia shared
+     prop `auth.user.settings`) y los aplica al montar.
+   - Densidad: alternar clases Tailwind en tablas (ej. `p-2` vs `p-4`,
+     `text-sm` vs `text-base`) según `settings.density`.
+   - Día de inicio: pasar `week_start` al componente `Calendar` y date pickers.
+   - Horizonte de proyección: usar `settings.projection_horizon` en el comando
+     `app:generate-projections` y en la vista de proyección (reemplaza el
+     horizonte hardcodeado de 12 meses).
+   - Sección de inicio: redirect tras login según `settings.start_section`.
+7. **Tests:** paleta se persiste y aplica el class correcto; upload de foto
+   valida mime/size y rechaza archivos inválidos; densidad cambia las clases de
+   tabla; validación del endpoint rechaza claves/valores no permitidos.
 
 **Criterios de aceptación**
 
-- [ ] Tras importar, el balance del último mes coincide con el de la planilla.
-- [ ] Las categorías y cuentas aparecen en sus respectivas vistas.
-- [ ] El reporte muestra cuántas filas se importaron y cuántas se omitieron.
+- [ ] Cambio la paleta a “Rose” y, al recargar, sigue aplicada (persistida en
+  BD, no solo en localStorage).
+- [ ] En light mode con paleta “Rose” la app ya no se ve blanco-negro: muestra
+  acentos rosados.
+- [ ] Subo una foto de perfil y se ve en el header; si no hay foto, veo mis
+  iniciales.
+- [ ] Cambio a densidad compacta y las tablas muestran más filas por pantalla.
+- [ ] Configuro “sección de inicio: Movimientos” y al loguear aterrizo ahí.
+- [ ] Configuro “día de inicio: lunes” y el calendar empieza en lunes.
+- [ ] Configuro “horizonte: 6 meses” y la proyección solo genera 6 meses.
+- [ ] El endpoint rechaza valores fuera de la lista permitida.
 
-**Commits:** `feat: excel import command with phpspreadsheet`,
-`feat: category and account import`,
-`feat: import report and edge-case handling`,
-`test: excel importer with fixture`.
+**Commits:** `feat: user settings json column`,
+`feat: eight color palettes via css variables`,
+`feat: settings endpoint with validation`,
+`feat: profile photo upload`,
+`feat: density and start section preferences`,
+`feat: week start and projection horizon preferences`,
+`test: personalization and preferences`.
 
 ---
 
@@ -465,7 +518,7 @@ proyección a futuro.
    - Categoría eliminada con movimientos asociados (restricción / null).
 3. Confirmaciones de borrado con dialog shadcn-vue.
 4. Atajos de teclado (nuevo movimiento con `N`, cambiar mes con ←/→).
-5. Tema claro/oscuro (el starter kit ya lo trae).
+5. Verificar tema claro/oscuro y paletas (implementados en Fase 8).
 6. README con instrucciones de instalación y uso local.
 7. Verificar portabilidad para despliegue futuro: config vía `.env`, sin atar a
    servicios gestionados, documento breve con notas para shared hosting
@@ -505,15 +558,15 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
                                        Fase 7 (dashboard)
                                             │
                                             ▼
-                                       Fase 8 (import Excel)
+                                       Fase 8 (personalización)
                                             │
                                             ▼
                                        Fase 9 (pulido/deploy)
 ```
 
 - Las fases 4 y 5 pueden hacerse en paralelo (no dependen entre sí).
-- La fase 8 (import) puede adelantarse parcialmente después de la fase 1 si se
-  quiere validar el modelo contra datos reales cuanto antes.
+- La Fase 8 (personalización) depende de tener auth y layout listos (fases 0–7).
+- Las fases 0–7 están completadas; el trabajo continúa en la Fase 8.
 
 ---
 
@@ -529,9 +582,9 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 | 5    | 1 día           |                                        |
 | 6    | 1.5 días        | Generador de proyecciones              |
 | 7    | 1 día           |                                        |
-| 8    | 1.5 días        | Parser del Excel real                  |
-| 9    | 1 día           |                                        |
-| **Total** | **~10–12 días** | Lineal; paralelizando 4+5 algo menos |
+| 8    | 1–1.5 días      | Personalización y preferencias         |
+| 9    | 1 día           | Pulido final                           |
+| **Total** | **~10–11 días** | Fases 0–7 ya completadas               |
 
 ---
 
@@ -539,7 +592,7 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 
 | Riesgo                                              | Mitigación                                           |
 | --------------------------------------------------- | ---------------------------------------------------- |
-| El Excel tiene inconsistencias (fechas, categorías) | Importer con reporte de advertencias; revisión manual |
+| Paletas personalizadas afecten accesibilidad (contraste) | Validar contraste WCAG AA en cada paleta light/dark |
 | El cálculo de balance sea lento con mucho historial | Empezar con Opción A; migrar a columna precalculada si hace falta |
 | Pérdida de datos al editar/borrar                   | Soft deletes en `movements` + confirmación en UI     |
 | Proyección y recurrentes se desincronizan           | Botón “regenerar proyecciones” tras editar plantillas |
@@ -550,9 +603,10 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 ## 9. Próximos pasos inmediatos
 
 1. ~~Confirmar las decisiones de arquitectura de la §3~~ → **hecho** (ver §10).
-2. Ejecutar **Fase 0** para tener el proyecto corriendo.
-3. Validar el modelo de datos de la Fase 1 contra una muestra real del Excel
-   antes de avanzar.
+2. ~~Ejecutar Fase 0~~ → **hecho**.
+3. ~~Validar el modelo contra datos reales~~ → **hecho** (fases 0–7 completadas).
+4. Ejecutar **Fase 8** (personalización y preferencias).
+5. Luego **Fase 9** (pulido y tests finales).
 
 ---
 
@@ -563,7 +617,10 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 | Cuentas    | Snapshot manual de saldos, sin vínculo movimiento↔cuenta | Replica el flujo de la planilla; conciliación como verificación cruzada |
 | Moneda     | Únicamente PEN (soles)                             | Sin tablas de moneda ni conversiones; locale `es_PE` |
 | Despliegue | Solo local en esta iteración                       | SQLite suficiente; futuro shared hosting en subdominio de `pomareda.dev` gestionado por el usuario |
-| Liquidación | Cuenta importada y **excluida siempre** de la conciliación | `exclude_from_reconciliation = true`; gestión específica del fondo queda como feature futuro fuera de alcance |
+| Liquidación | Cuenta creada manualmente y **excluida siempre** de la conciliación | `exclude_from_reconciliation = true`; gestión específica del fondo queda como feature futuro fuera de alcance |
+| Settings | Columna `settings` (JSON) en `users`, casteada como `array` | Un solo campo para todos los preferences; sin migración por setting nuevo; sobrevive a limpieza de caché y cambio de navegador |
+| Theming | 8 paletas preset vía CSS variables + class swap en `<html>`; ortogonal a light/dark | No se almacenan colores crudos; reutiliza el sistema de CSS vars de shadcn-vue |
+| Import Excel | **Descartado** | El usuario no necesita migrar datos históricos; la Fase 8 original se reemplaza por personalización |
 
-Con estas decisiones consolidadas, el plan está listo para ejecutarse desde la
-**Fase 0**.
+Con estas decisiones consolidadas, las fases 0–7 están completadas y el plan
+avanza con la **Fase 8** (personalización) y **Fase 9** (pulido).
