@@ -23,6 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useSettings } from '@/composables/useSettings';
 import categorias from '@/routes/categorias';
 
 const props = defineProps<{
@@ -43,6 +44,7 @@ defineOptions({
 });
 
 const { format } = useCurrency();
+const { densityClass } = useSettings();
 
 // --- Month navigation ---
 const selectedDate = computed(() => {
@@ -207,12 +209,12 @@ return;
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead class="text-right">Gasto del mes</TableHead>
-                        <TableHead class="text-right">Límite</TableHead>
-                        <TableHead class="min-w-[180px]">Progreso</TableHead>
-                        <TableHead class="w-[80px]"></TableHead>
+                        <TableHead :class="densityClass.header">Tipo</TableHead>
+                        <TableHead :class="densityClass.header">Nombre</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Gasto del mes</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Límite</TableHead>
+                        <TableHead :class="[densityClass.header, 'min-w-[180px]']">Progreso</TableHead>
+                        <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -221,12 +223,12 @@ return;
                         :key="cat.id"
                         class="group"
                     >
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <Badge :variant="kindBadgeVariant[cat.kind] as any">
                                 {{ kindLabels[cat.kind] }}
                             </Badge>
                         </TableCell>
-                        <TableCell class="font-medium">
+                        <TableCell :class="[densityClass.cell, 'font-medium']">
                             <div class="flex items-center gap-2">
                                 <span
                                     v-if="cat.color"
@@ -236,13 +238,13 @@ return;
                                 {{ cat.name }}
                             </div>
                         </TableCell>
-                        <TableCell class="text-right font-medium tabular-nums text-red-600 dark:text-red-400">
+                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums text-red-600 dark:text-red-400']">
                             {{ format(cat.spent) }}
                         </TableCell>
-                        <TableCell class="text-right tabular-nums text-muted-foreground">
+                        <TableCell :class="[densityClass.cell, 'text-right tabular-nums text-muted-foreground']">
                             {{ cat.monthly_limit !== null ? format(cat.monthly_limit) : '—' }}
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <div v-if="cat.monthly_limit !== null && cat.monthly_limit > 0" class="flex items-center gap-3">
                                 <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                     <div
@@ -269,7 +271,7 @@ return;
                                 Sin límite
                             </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                     variant="ghost"

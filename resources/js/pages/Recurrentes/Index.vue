@@ -23,6 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useSettings } from '@/composables/useSettings';
 import recurrentes from '@/routes/recurrentes';
 
 const props = defineProps<{
@@ -42,6 +43,7 @@ defineOptions({
 });
 
 const { format, formatSigned } = useCurrency();
+const { densityClass } = useSettings();
 
 // --- Dialog state ---
 const showCreateDialog = ref(false);
@@ -142,14 +144,14 @@ function formatSign(value: number): string {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead class="text-right">Importe</TableHead>
-                        <TableHead>Categoría</TableHead>
-                        <TableHead class="text-center">Día</TableHead>
-                        <TableHead>Inicio</TableHead>
-                        <TableHead>Fin</TableHead>
-                        <TableHead class="text-center">Estado</TableHead>
-                        <TableHead class="w-[80px]"></TableHead>
+                        <TableHead :class="densityClass.header">Nombre</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Importe</TableHead>
+                        <TableHead :class="densityClass.header">Categoría</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-center']">Día</TableHead>
+                        <TableHead :class="densityClass.header">Inicio</TableHead>
+                        <TableHead :class="densityClass.header">Fin</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-center']">Estado</TableHead>
+                        <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -158,35 +160,34 @@ function formatSign(value: number): string {
                         :key="tpl.id"
                         class="group"
                     >
-                        <TableCell class="font-medium">
+                        <TableCell :class="[densityClass.cell, 'font-medium']">
                             {{ tpl.name }}
                         </TableCell>
                         <TableCell
-                            class="text-right font-medium tabular-nums"
-                            :class="tpl.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                            :class="[densityClass.cell, 'text-right font-medium tabular-nums', tpl.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
                         >
                             {{ formatSign(tpl.amount) }}
                         </TableCell>
-                        <TableCell class="text-muted-foreground">
+                        <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
                             {{ tpl.category_name ?? 'Sin categoría' }}
                         </TableCell>
-                        <TableCell class="text-center tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'text-center tabular-nums']">
                             {{ tpl.day_of_month }}
                         </TableCell>
-                        <TableCell class="tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'tabular-nums']">
                             {{ parseDate(tpl.start_month) }}
                         </TableCell>
-                        <TableCell class="tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'tabular-nums']">
                             {{ parseDate(tpl.end_month) }}
                         </TableCell>
-                        <TableCell class="text-center">
+                        <TableCell :class="[densityClass.cell, 'text-center']">
                             <Badge
                                 :variant="tpl.active ? 'secondary' : 'outline'"
                             >
                                 {{ tpl.active ? 'Activo' : 'Inactivo' }}
                             </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                     variant="ghost"

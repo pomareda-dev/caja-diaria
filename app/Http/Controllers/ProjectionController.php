@@ -15,7 +15,8 @@ class ProjectionController extends Controller
      */
     public function index(Request $request): Response
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+        $userId = $user->id;
         $today = Carbon::now()->toDateString();
 
         // Get all future movements (date > today, regardless of is_projected flag)
@@ -50,7 +51,7 @@ class ProjectionController extends Controller
         return Inertia::render('Proyeccion/Index', [
             'items' => $items->values()->all(),
             'openingBalance' => $realBalance,
-            'horizonMonths' => 12,
+            'horizonMonths' => $user->settings['projection_horizon'] ?? 12,
         ]);
     }
 }

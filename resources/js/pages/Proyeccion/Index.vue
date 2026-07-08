@@ -17,6 +17,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useSettings } from '@/composables/useSettings';
 import proyeccion from '@/routes/proyeccion';
 
 export interface ProjectionItem {
@@ -49,6 +50,7 @@ defineOptions({
 });
 
 const { format, formatSigned } = useCurrency();
+const { densityClass } = useSettings();
 
 function sourceLabel(source: string): string {
     const labels: Record<string, string> = {
@@ -111,12 +113,12 @@ function formatSign(value: number): string {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Movimiento</TableHead>
-                        <TableHead>Categoría</TableHead>
-                        <TableHead>Origen</TableHead>
-                        <TableHead class="text-right">Cantidad</TableHead>
-                        <TableHead class="text-right">Proyección</TableHead>
+                        <TableHead :class="densityClass.header">Fecha</TableHead>
+                        <TableHead :class="densityClass.header">Movimiento</TableHead>
+                        <TableHead :class="densityClass.header">Categoría</TableHead>
+                        <TableHead :class="densityClass.header">Origen</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Cantidad</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Proyección</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -124,10 +126,10 @@ function formatSign(value: number): string {
                         v-for="item in items"
                         :key="item.id"
                     >
-                        <TableCell class="font-medium whitespace-nowrap">
+                        <TableCell :class="[densityClass.cell, 'font-medium whitespace-nowrap']">
                             {{ formatDate(item.date) }}
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <div class="flex items-center gap-2">
                                 <span>{{ item.description }}</span>
                                 <Badge
@@ -139,21 +141,20 @@ function formatSign(value: number): string {
                                 </Badge>
                             </div>
                         </TableCell>
-                        <TableCell class="text-muted-foreground">
+                        <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
                             {{ item.category_name ?? 'Sin categoría' }}
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <span class="text-xs text-muted-foreground">
                                 {{ sourceLabel(item.source) }}
                             </span>
                         </TableCell>
                         <TableCell
-                            class="text-right font-medium tabular-nums"
-                            :class="item.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                            :class="[densityClass.cell, 'text-right font-medium tabular-nums', item.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
                         >
                             {{ formatSign(item.amount) }}
                         </TableCell>
-                        <TableCell class="text-right font-medium tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums']">
                             {{ format(item.running_balance) }}
                         </TableCell>
                     </TableRow>

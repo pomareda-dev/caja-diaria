@@ -32,6 +32,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useSettings } from '@/composables/useSettings';
 import cuentas from '@/routes/cuentas';
 
 const props = defineProps<{
@@ -56,6 +57,7 @@ defineOptions({
 });
 
 const { format } = useCurrency();
+const { densityClass } = useSettings();
 
 // --- Kind helpers ---
 const kindLabels: Record<string, string> = {
@@ -146,11 +148,11 @@ const totalBalance = computed(() => {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Cuenta</TableHead>
-                        <TableHead class="text-right">Saldo</TableHead>
-                        <TableHead class="text-center">Estado</TableHead>
-                        <TableHead class="w-[100px]"></TableHead>
+                        <TableHead :class="densityClass.header">Tipo</TableHead>
+                        <TableHead :class="densityClass.header">Cuenta</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Saldo</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-center']">Estado</TableHead>
+                        <TableHead :class="[densityClass.header, 'w-[100px]']"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -159,12 +161,12 @@ const totalBalance = computed(() => {
                         :key="account.id"
                         class="group"
                     >
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <Badge :variant="kindBadgeVariant[account.kind] as any">
                                 {{ kindLabels[account.kind] }}
                             </Badge>
                         </TableCell>
-                        <TableCell class="font-medium">
+                        <TableCell :class="[densityClass.cell, 'font-medium']">
                             <div class="flex items-center gap-2">
                                 {{ account.name }}
                                 <Badge
@@ -176,10 +178,10 @@ const totalBalance = computed(() => {
                                 </Badge>
                             </div>
                         </TableCell>
-                        <TableCell class="text-right font-medium tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums']">
                             {{ format(account.balance) }}
                         </TableCell>
-                        <TableCell class="text-center">
+                        <TableCell :class="[densityClass.cell, 'text-center']">
                             <span
                                 v-if="account.exclude_from_reconciliation"
                                 class="text-xs text-muted-foreground"
@@ -194,7 +196,7 @@ const totalBalance = computed(() => {
                                 Incluida
                             </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell :class="densityClass.cell">
                             <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
                                     variant="ghost"
@@ -240,13 +242,13 @@ const totalBalance = computed(() => {
                 <!-- Footer with totals -->
                 <TableFooter v-if="accounts.length > 0">
                     <TableRow>
-                        <TableCell colspan="2" class="font-semibold">
+                        <TableCell :class="[densityClass.cell, 'font-semibold']" colspan="2">
                             Total
                         </TableCell>
-                        <TableCell class="text-right font-bold tabular-nums">
+                        <TableCell :class="[densityClass.cell, 'text-right font-bold tabular-nums']">
                             {{ format(totalBalance) }}
                         </TableCell>
-                        <TableCell colspan="2" />
+                        <TableCell :class="densityClass.cell" colspan="2" />
                     </TableRow>
                 </TableFooter>
             </Table>

@@ -29,6 +29,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useSettings } from '@/composables/useSettings';
 import movimientos from '@/routes/movimientos';
 
 const props = defineProps<{
@@ -53,6 +54,7 @@ defineOptions({
 });
 
 const { format, formatSigned } = useCurrency();
+const { densityClass } = useSettings();
 
 // --- Month navigation ---
 const selectedDate = computed(() => {
@@ -267,13 +269,13 @@ return;
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead class="w-[32px]"></TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Movimiento</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead class="text-right">Cantidad</TableHead>
-                            <TableHead class="text-right">Balance</TableHead>
-                            <TableHead class="w-[80px]"></TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
+                            <TableHead :class="densityClass.header">Fecha</TableHead>
+                            <TableHead :class="densityClass.header">Movimiento</TableHead>
+                            <TableHead :class="densityClass.header">Tipo</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right']">Cantidad</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right']">Balance</TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <draggable
@@ -289,14 +291,14 @@ return;
                             <!-- Opening balance row -->
                             <TableRow class="bg-muted/30">
                                 <TableCell></TableCell>
-                                <TableCell colspan="2" class="font-medium text-muted-foreground">
+                                <TableCell :class="[densityClass.cell, 'font-medium text-muted-foreground']" colspan="2">
                                     Saldo inicial
                                 </TableCell>
                                 <TableCell></TableCell>
-                                <TableCell class="text-right font-medium text-muted-foreground">
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium text-muted-foreground']">
                                     {{ format(openingBalance) }}
                                 </TableCell>
-                                <TableCell class="text-right font-medium">
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium']">
                                     {{ format(openingBalance) }}
                                 </TableCell>
                                 <TableCell></TableCell>
@@ -308,25 +310,24 @@ return;
                                 <TableCell class="p-0 pl-2">
                                     <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
                                 </TableCell>
-                                <TableCell class="font-medium whitespace-nowrap">
+                                <TableCell :class="[densityClass.cell, 'font-medium whitespace-nowrap']">
                                     {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell :class="densityClass.cell">
                                     <span>{{ movement.description }}</span>
                                 </TableCell>
-                                <TableCell class="text-muted-foreground">
+                                <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
                                     {{ movement.category_name ?? 'Sin categoría' }}
                                 </TableCell>
                                 <TableCell
-                                    class="text-right font-medium tabular-nums"
-                                    :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                    :class="[densityClass.cell, 'text-right font-medium tabular-nums', movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
                                 >
                                     {{ formatSigned(movement.amount) }}
                                 </TableCell>
-                                <TableCell class="text-right font-medium tabular-nums">
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums']">
                                     {{ format(movement.running_balance) }}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell :class="densityClass.cell">
                                     <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button
                                             variant="ghost"
@@ -376,13 +377,13 @@ return;
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead class="w-[32px]"></TableHead>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Movimiento</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead class="text-right">Cantidad</TableHead>
-                            <TableHead class="text-right">Proyección</TableHead>
-                            <TableHead class="w-[80px]"></TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
+                            <TableHead :class="densityClass.header">Fecha</TableHead>
+                            <TableHead :class="densityClass.header">Movimiento</TableHead>
+                            <TableHead :class="densityClass.header">Tipo</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right']">Cantidad</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right']">Proyección</TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <draggable
@@ -399,10 +400,10 @@ return;
                                 <TableCell class="p-0 pl-2">
                                     <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
                                 </TableCell>
-                                <TableCell class="font-medium whitespace-nowrap">
+                                <TableCell :class="[densityClass.cell, 'font-medium whitespace-nowrap']">
                                     {{ new Date(movement.date + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) }}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell :class="densityClass.cell">
                                     <div class="flex items-center gap-2">
                                         <span>{{ movement.description }}</span>
                                         <Badge
@@ -413,19 +414,18 @@ return;
                                         </Badge>
                                     </div>
                                 </TableCell>
-                                <TableCell class="text-muted-foreground">
+                                <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
                                     {{ movement.category_name ?? 'Sin categoría' }}
                                 </TableCell>
                                 <TableCell
-                                    class="text-right font-medium tabular-nums"
-                                    :class="movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                    :class="[densityClass.cell, 'text-right font-medium tabular-nums', movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
                                 >
                                     {{ formatSigned(movement.amount) }}
                                 </TableCell>
-                                <TableCell class="text-right font-medium tabular-nums text-muted-foreground">
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums text-muted-foreground']">
                                     {{ format(projectedBalances[index]) }}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell :class="densityClass.cell">
                                     <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button
                                             variant="ghost"

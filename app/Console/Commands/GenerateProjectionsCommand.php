@@ -14,7 +14,7 @@ class GenerateProjectionsCommand extends Command
      * @var string
      */
     protected $signature = 'app:generate-projections
-        {--horizon= : Number of months into the future (default: 12)}
+        {--horizon= : Number of months into the future (default: user preference or 12)}
         {--user= : Generate for a specific user ID}';
 
     /**
@@ -29,16 +29,25 @@ class GenerateProjectionsCommand extends Command
      */
     public function handle(ProjectionService $projectionService): int
     {
-        $horizonMonths = $this->option('horizon');
-        if ($horizonMonths !== null) {
-            $horizonMonths = (int) $horizonMonths;
+        $explicitHorizon = $this->option('horizon');
+        if ($explicitHorizon !== null) {
+            $explicitHorizon = (int) $explicitHorizon;
         }
 
         $userId = $this->option('user');
         if ($userId !== null) {
             $userId = (int) $userId;
+
+            // When --horizon is not given, read the user's preference
+            if ($explicitHorizon === null) {
+                $user = User::findOrFail($userId);
+                $horizonMonths = $user->settings['projection_horizon'] ?? ProjectionService::DEFAULT_HORIZON_MONTHS;
+            } else {
+                $horizonMonths = $explicitHorizon;
+            }
+
             $count = $projectionService->generateForUser($userId, $horizonMonths);
-            $this->info("Generated {$count} projected movements for user #{$userId}.");
+            $this->info("Generated {$count} projected movements for user #{$userId} (horizon: {$horizonMonths}).");
 
             return self::SUCCESS;
         }
@@ -47,9 +56,14 @@ class GenerateProjectionsCommand extends Command
         $total = 0;
 
         foreach ($users as $user) {
+            // When --horizon is not given, each user uses their own preference
+            $horizonMonths = $explicitHorizon !== null
+                ? $explicitHorizon
+                : ($user->settings['projection_horizon'] ?? ProjectionService::DEFAULT_HORIZON_MONTHS);
+
             $count = $projectionService->generateForUser($user->id, $horizonMonths);
             $total += $count;
-            $this->info("User #{$user->id}: {$count} projected movements.");
+            $this->info("User #{$user->id}: {$count} projected movements (horizon: {$horizonMonths}).");
         }
 
         $this->info("Total: {$total} projected movements generated.");
