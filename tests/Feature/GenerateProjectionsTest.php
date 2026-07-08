@@ -318,3 +318,51 @@ test('generate projections artisan command works', function () {
 
     Carbon::setTestNow();
 });
+
+// ─── Projection Horizon (settings vs --horizon flag) ───────────────
+
+test('projection command uses user settings horizon when --horizon omitted', function () {
+    $user = User::factory()->create(['settings' => ['projection_horizon' => 2]]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Test Settings Horizon',
+        'amount' => -100,
+        'day_of_month' => 5,
+        'start_month' => '2026-08-01',
+        'end_month' => null,
+        'active' => true,
+    ]);
+
+    $this->artisan('app:generate-projections')
+        ->assertExitCode(0);
+
+    expect(Movement::where('user_id', $user->id)->where('source', 'recurring')->count())->toBe(2);
+
+    Carbon::setTestNow();
+});
+
+test('projection command --horizon overrides user settings', function () {
+    $user = User::factory()->create(['settings' => ['projection_horizon' => 2]]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Test Override Horizon',
+        'amount' => -100,
+        'day_of_month' => 5,
+        'start_month' => '2026-08-01',
+        'end_month' => null,
+        'active' => true,
+    ]);
+
+    $this->artisan('app:generate-projections --horizon=3')
+        ->assertExitCode(0);
+
+    expect(Movement::where('user_id', $user->id)->where('source', 'recurring')->count())->toBe(3);
+
+    Carbon::setTestNow();
+});
