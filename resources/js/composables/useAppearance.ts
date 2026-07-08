@@ -1,6 +1,7 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
 import type { Appearance, ResolvedAppearance } from '@/types';
+import { router } from '@inertiajs/vue3';
 
 export type { Appearance, ResolvedAppearance };
 
@@ -9,6 +10,48 @@ export type UseAppearanceReturn = {
     resolvedAppearance: ComputedRef<ResolvedAppearance>;
     updateAppearance: (value: Appearance) => void;
 };
+
+/**
+ * Module-level ref for the current color palette key.
+ * Updated by setTheme() and initializeTheme().
+ */
+export const themeKey: Ref<string> = ref('slate');
+
+/**
+ * Apply a palette class to <html>, removing any previous .theme-* classes.
+ */
+function applyPalette(key: string): void {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const el = document.documentElement;
+
+    for (const cls of el.classList) {
+        if (cls.startsWith('theme-')) {
+            el.classList.remove(cls);
+        }
+    }
+
+    el.classList.add(`theme-${key}`);
+}
+
+/**
+ * Read the XSRF-TOKEN cookie for fetch requests to Laravel.
+ */
+function getCsrfToken(): string | null {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+
+    if (!match) {
+        return null;
+    }
+
+    return decodeURIComponent(match[1]);
+}
 
 export function updateTheme(value: Appearance): void {
     if (typeof window === 'undefined') {
@@ -27,6 +70,27 @@ export function updateTheme(value: Appearance): void {
         );
     } else {
         document.documentElement.classList.toggle('dark', value === 'dark');
+    }
+}
+
+export function setTheme(key: string): void {
+    themeKey.value = key;
+    applyPalette(key);
+
+    const csrfToken = getCsrfToken();
+
+    if (csrfToken) {
+        fetch('/settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ theme: key }),
+        }).catch(() => {
+            // Server save failed — UI already updated locally
+        });
     }
 }
 
@@ -75,12 +139,31 @@ export function initializeTheme(): void {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
     updateTheme(savedAppearance || 'system');
 
-    // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+
+    // Apply palette from Inertia shared props (fallback to 'slate')
+    let initialTheme = 'slate';
+
+    try {
+        const r = router as unknown as { page: { props: Record<string, unknown> } };
+
+        const auth = r.page?.props?.auth as Record<string, unknown> | undefined;
+        const user = auth?.user as Record<string, unknown> | undefined;
+        const settings = user?.settings as Record<string, unknown> | undefined;
+        const pageTheme = settings?.theme;
+
+        if (pageTheme && typeof pageTheme === 'string') {
+            initialTheme = pageTheme;
+        }
+    } catch {
+        // router.page not yet available — use default
+    }
+
+    themeKey.value = initialTheme;
+    applyPalette(initialTheme);
 }
 
 const appearance = ref<Appearance>('system');
@@ -107,10 +190,8 @@ export function useAppearance(): UseAppearanceReturn {
     function updateAppearance(value: Appearance) {
         appearance.value = value;
 
-        // Store in localStorage for client-side persistence...
         localStorage.setItem('appearance', value);
 
-        // Store in cookie for SSR...
         setCookie('appearance', value);
 
         updateTheme(value);
