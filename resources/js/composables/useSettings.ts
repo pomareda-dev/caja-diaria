@@ -7,7 +7,7 @@ import { toast } from 'vue-sonner';
  * All keys are optional — defaults are applied in the composable.
  */
 export interface UserSettings {
-    theme: 'slate' | 'rose' | 'blue' | 'green' | 'amber' | 'violet' | 'teal' | 'red';
+    theme: 'default' | 'bold-tech' | 'claude' | 'pastel-dreams' | 'quantum-rose' | 'sunny-sprout' | 'twitter' | 'violet-bloom';
     density: 'compact' | 'comfortable';
     start_section: 'dashboard' | 'movements' | 'categories' | 'accounts' | 'recurring';
     projection_horizon: number;
@@ -15,7 +15,7 @@ export interface UserSettings {
 }
 
 const defaults: UserSettings = {
-    theme: 'slate',
+    theme: 'default',
     density: 'comfortable',
     start_section: 'dashboard',
     projection_horizon: 12,
