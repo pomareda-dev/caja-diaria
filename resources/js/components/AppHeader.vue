@@ -38,6 +38,25 @@ import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
+const avatarUrl = computed(() => {
+    const user = auth.value.user as Record<string, unknown>;
+
+    // Legacy `user.avatar` property
+    if (user.avatar && user.avatar !== '') {
+        return user.avatar as string;
+    }
+
+    // New `settings.avatar_path` from preferences photo upload
+    const settings = user.settings as Record<string, unknown> | null | undefined;
+    const avatarPath = settings?.avatar_path as string | undefined;
+
+    if (avatarPath && avatarPath !== '') {
+        return `/storage/${avatarPath}`;
+    }
+
+    return undefined;
+});
+
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
@@ -249,8 +268,8 @@ const rightNavItems: NavItem[] = [
                                     class="size-8 overflow-hidden rounded-full"
                                 >
                                     <AvatarImage
-                                        v-if="auth.user.avatar"
-                                        :src="auth.user.avatar"
+                                        v-if="avatarUrl"
+                                        :src="avatarUrl"
                                         :alt="auth.user.name"
                                     />
                                     <AvatarFallback
