@@ -38,14 +38,14 @@ const user = computed(() => page.props.auth.user as Record<string, unknown>);
 
 // --- Palette ---
 const palettes: { key: string; label: string }[] = [
-    { key: 'slate', label: 'Slate' },
-    { key: 'rose', label: 'Rose' },
-    { key: 'blue', label: 'Blue' },
-    { key: 'green', label: 'Green' },
-    { key: 'amber', label: 'Amber' },
-    { key: 'violet', label: 'Violet' },
-    { key: 'teal', label: 'Teal' },
-    { key: 'red', label: 'Red' },
+    { key: 'default', label: 'Default' },
+    { key: 'bold-tech', label: 'Bold Tech' },
+    { key: 'claude', label: 'Claude' },
+    { key: 'pastel-dreams', label: 'Pastel Dreams' },
+    { key: 'quantum-rose', label: 'Quantum Rose' },
+    { key: 'sunny-sprout', label: 'Sunny Sprout' },
+    { key: 'twitter', label: 'Twitter' },
+    { key: 'violet-bloom', label: 'Violet Bloom' },
 ];
 
 function handlePaletteClick(key: string) {
@@ -209,9 +209,9 @@ function getCsrfToken(): string | null {
         <!-- Palette selector -->
         <Card>
             <CardHeader>
-                <CardTitle>Paleta de colores</CardTitle>
+                <CardTitle>Tema</CardTitle>
                 <CardDescription>
-                    Elige el color principal que se usará en botones, enlaces y elementos destacados
+                    Elige el diseño visual de la aplicación: colores, bordes, sombras y espaciado
                 </CardDescription>
             </CardHeader>
             <CardContent>
