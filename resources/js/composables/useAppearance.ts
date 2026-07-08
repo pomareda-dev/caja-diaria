@@ -12,10 +12,27 @@ export type UseAppearanceReturn = {
 };
 
 /**
+ * The 8 valid design-system theme keys.
+ * Used by initializeTheme() to validate/fallback stale keys.
+ */
+export const VALID_THEMES = [
+    'default',
+    'bold-tech',
+    'claude',
+    'pastel-dreams',
+    'quantum-rose',
+    'sunny-sprout',
+    'twitter',
+    'violet-bloom',
+] as const;
+
+export type ValidTheme = (typeof VALID_THEMES)[number];
+
+/**
  * Module-level ref for the current color palette key.
  * Updated by setTheme() and initializeTheme().
  */
-export const themeKey: Ref<string> = ref('slate');
+export const themeKey: Ref<string> = ref('default');
 
 /**
  * Apply a palette class to <html>, removing any previous .theme-* classes.
@@ -144,8 +161,8 @@ export function initializeTheme(): void {
 
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 
-    // Apply palette from Inertia shared props (fallback to 'slate')
-    let initialTheme = 'slate';
+    // Apply palette from Inertia shared props (fallback to 'default')
+    let initialTheme: string = 'default';
 
     try {
         const r = router as unknown as { page: { props: Record<string, unknown> } };
@@ -156,7 +173,10 @@ export function initializeTheme(): void {
         const pageTheme = settings?.theme;
 
         if (pageTheme && typeof pageTheme === 'string') {
-            initialTheme = pageTheme;
+            // Defensive check: reject stale/legacy keys gracefully
+            initialTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
+                ? pageTheme
+                : 'default';
         }
     } catch {
         // router.page not yet available — use default
