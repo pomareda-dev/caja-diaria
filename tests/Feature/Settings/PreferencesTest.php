@@ -20,7 +20,7 @@ test('settings update persists valid values', function (string $field, mixed $va
 
     expect($user->settings[$field])->toEqual($value);
 })->with([
-    'theme' => ['theme', 'rose'],
+    'theme' => ['theme', 'default'],
     'density' => ['density', 'compact'],
     'start_section' => ['start_section', 'movements'],
     'projection_horizon' => ['projection_horizon', 6],
@@ -34,6 +34,7 @@ test('settings update rejects invalid values', function (string $field, mixed $v
         ->assertSessionHasErrors($field);
 })->with([
     'theme pink' => ['theme', 'pink'],
+    'theme slate' => ['theme', 'slate'],
     'density cozy' => ['density', 'cozy'],
     'start_section wallet' => ['start_section', 'wallet'],
     'horizon 0' => ['projection_horizon', 0],
@@ -41,19 +42,40 @@ test('settings update rejects invalid values', function (string $field, mixed $v
     'horizon abc' => ['projection_horizon', 'abc'],
 ]);
 
+test('settings update accepts all valid design-system theme keys', function (string $theme) {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('settings.update'), ['theme' => $theme])
+        ->assertNoContent();
+
+    $user->refresh();
+
+    expect($user->settings['theme'])->toBe($theme);
+})->with([
+    'default' => 'default',
+    'bold-tech' => 'bold-tech',
+    'claude' => 'claude',
+    'pastel-dreams' => 'pastel-dreams',
+    'quantum-rose' => 'quantum-rose',
+    'sunny-sprout' => 'sunny-sprout',
+    'twitter' => 'twitter',
+    'violet-bloom' => 'violet-bloom',
+]);
+
 test('settings update ignores unknown keys', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->put(route('settings.update'), [
-            'theme' => 'rose',
+            'theme' => 'default',
             'is_admin' => true,
         ])
         ->assertNoContent();
 
     $user->refresh();
 
-    expect($user->settings['theme'])->toBe('rose');
+    expect($user->settings['theme'])->toBe('default');
     expect($user->settings)->not->toHaveKey('is_admin');
 });
 
@@ -61,7 +83,7 @@ test('settings update merges with existing settings', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->put(route('settings.update'), ['theme' => 'rose'])
+        ->put(route('settings.update'), ['theme' => 'claude'])
         ->assertNoContent();
 
     $this->actingAs($user)
@@ -70,7 +92,7 @@ test('settings update merges with existing settings', function () {
 
     $user->refresh();
 
-    expect($user->settings['theme'])->toBe('rose');
+    expect($user->settings['theme'])->toBe('claude');
     expect($user->settings['density'])->toBe('compact');
 });
 
