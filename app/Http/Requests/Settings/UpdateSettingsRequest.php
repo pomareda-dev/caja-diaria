@@ -23,7 +23,7 @@ class UpdateSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'theme' => ['nullable', 'in:slate,rose,blue,green,amber,violet,teal,red'],
+            'theme' => ['nullable', 'in:default,bold-tech,claude,pastel-dreams,quantum-rose,sunny-sprout,twitter,violet-bloom'],
             'density' => ['nullable', 'in:compact,comfortable'],
             'start_section' => ['nullable', 'in:dashboard,movements,categories,accounts,recurring'],
             'projection_horizon' => ['nullable', 'integer', 'between:1,24'],
