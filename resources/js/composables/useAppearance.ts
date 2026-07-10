@@ -152,6 +152,30 @@ const handleSystemThemeChange = () => {
     updateTheme(currentAppearance || 'system');
 };
 
+export function syncThemeFromPage(page: {
+    props?: {
+        auth?: {
+            user?: {
+                settings?: Record<string, unknown>;
+            } | null;
+        };
+    };
+}): void {
+    const user = page.props?.auth?.user;
+    const pageTheme = user?.settings?.theme;
+
+    let nextTheme = 'default';
+
+    if (pageTheme && typeof pageTheme === 'string') {
+        nextTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
+            ? pageTheme
+            : 'default';
+    }
+
+    themeKey.value = nextTheme;
+    applyPalette(nextTheme);
+}
+
 export function initializeTheme(): void {
     if (typeof window === 'undefined') {
         return;
@@ -162,9 +186,6 @@ export function initializeTheme(): void {
 
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 
-    // Read theme from Inertia's server-rendered <script data-page> tag.
-    // This is available synchronously before any JS executes and avoids
-    // the need for router.page (which doesn't exist in Inertia v3's Router).
     let initialTheme: string = 'default';
 
     try {
@@ -186,7 +207,6 @@ export function initializeTheme(): void {
             const pageTheme = pageData?.props?.auth?.user?.settings?.theme;
 
             if (pageTheme && typeof pageTheme === 'string') {
-                // Defensive check: reject stale/legacy keys gracefully
                 initialTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
                     ? pageTheme
                     : 'default';
