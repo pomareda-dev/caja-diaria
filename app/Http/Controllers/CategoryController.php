@@ -41,7 +41,20 @@ class CategoryController extends Controller
             ->selectRaw('category_id, SUM(ABS(amount)) as spent')
             ->pluck('spent', 'category_id');
 
-        $categoriesWithBudget = $categories->map(function (Category $cat) use ($spentByCategory) {
+        // Batch compute balance (income - expenses) per category for the selected month
+        $balanceByCategory = Movement::where('user_id', $request->user()->id)
+            ->whereIn('category_id', $categories->pluck('id'))
+            ->whereBetween('date', [
+                $selectedMonth->copy()->startOfMonth()->toDateString(),
+                $selectedMonth->copy()->endOfMonth()->toDateString(),
+            ])
+            ->where('date', '<=', Carbon::now()->toDateString())
+            ->where('is_projected', false)
+            ->groupBy('category_id')
+            ->selectRaw('category_id, SUM(amount) as balance')
+            ->pluck('balance', 'category_id');
+
+        $categoriesWithBudget = $categories->map(function (Category $cat) use ($spentByCategory, $balanceByCategory) {
             return [
                 'id' => $cat->id,
                 'name' => $cat->name,
@@ -49,6 +62,7 @@ class CategoryController extends Controller
                 'color' => $cat->color,
                 'monthly_limit' => $cat->monthly_limit ? (float) $cat->monthly_limit : null,
                 'spent' => (float) ($spentByCategory->get($cat->id) ?? 0),
+                'balance' => (float) ($balanceByCategory->get($cat->id) ?? 0),
                 'sort_order' => $cat->sort_order,
             ];
         });

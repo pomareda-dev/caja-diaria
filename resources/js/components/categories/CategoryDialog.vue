@@ -31,6 +31,7 @@ export interface CategoryData {
     color: string | null;
     monthly_limit: number | null;
     spent: number;
+    balance: number;
     sort_order: number;
 }
 

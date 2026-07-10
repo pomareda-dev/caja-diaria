@@ -439,6 +439,138 @@ test('spent from previous month does not affect current month spent', function (
     Carbon::setTestNow();
 });
 
+// ─── Balance Calculation ──────────────────────────────────────────
+
+test('balance returns zero for category with no movements', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->expense()->create([
+        'user_id' => $user->id,
+        'name' => 'Mercado',
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    $response = $this->get(route('categorias.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('categories.0.balance', 0)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('balance sums income and expenses for category in the month', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Sueldo',
+        'kind' => 'income',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-05',
+        'amount' => 1000,
+        'source' => 'manual',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-10',
+        'amount' => -200,
+        'source' => 'manual',
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    $response = $this->get(route('categorias.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('categories.0.balance', 800)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('balance only counts actual movements not projected', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->expense()->create([
+        'user_id' => $user->id,
+        'name' => 'Mercado',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-05',
+        'amount' => -100,
+        'source' => 'manual',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-25',
+        'amount' => -200,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    $response = $this->get(route('categorias.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('categories.0.balance', -100)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('balance from previous month does not affect current month balance', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->expense()->create([
+        'user_id' => $user->id,
+        'name' => 'Mercado',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-06-15',
+        'amount' => -300,
+        'source' => 'manual',
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-10',
+        'amount' => -100,
+        'source' => 'manual',
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    $response = $this->get(route('categorias.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('categories.0.balance', -100)
+    );
+
+    Carbon::setTestNow();
+});
+
 test('categories with limit show monthly_limit and categories without show null', function () {
     $user = User::factory()->create();
     $this->actingAs($user);

@@ -43,8 +43,16 @@ defineOptions({
     },
 });
 
-const { format } = useCurrency();
+const { format, formatSigned } = useCurrency();
 const { densityClass } = useSettings();
+
+function formatSign(value: number): string {
+    if (value === 0) {
+        return format(value);
+    }
+
+    return formatSigned(value);
+}
 
 // --- Month navigation ---
 const selectedDate = computed(() => {
@@ -211,7 +219,7 @@ return;
                     <TableRow>
                         <TableHead :class="densityClass.header">Tipo</TableHead>
                         <TableHead :class="densityClass.header">Nombre</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Gasto del mes</TableHead>
+                        <TableHead :class="[densityClass.header, 'text-right']">Balance</TableHead>
                         <TableHead :class="[densityClass.header, 'text-right']">Límite</TableHead>
                         <TableHead :class="[densityClass.header, 'min-w-[180px]']">Progreso</TableHead>
                         <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
@@ -238,8 +246,8 @@ return;
                                 {{ cat.name }}
                             </div>
                         </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums text-red-600 dark:text-red-400']">
-                            {{ format(cat.spent) }}
+                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums', cat.balance > 0 ? 'text-green-600 dark:text-green-400' : cat.balance < 0 ? 'text-red-600 dark:text-red-400' : '']">
+                            {{ formatSign(cat.balance) }}
                         </TableCell>
                         <TableCell :class="[densityClass.cell, 'text-right tabular-nums text-muted-foreground']">
                             {{ cat.monthly_limit !== null ? format(cat.monthly_limit) : '—' }}
