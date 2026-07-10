@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { ColorPicker } from '@/components/ui/color-picker';
 import {
     Dialog,
     DialogContent,
@@ -169,13 +170,8 @@ function submit() {
 
                 <!-- Color -->
                 <div class="grid gap-2">
-                    <Label for="color">Color (opcional)</Label>
-                    <Input
-                        id="color"
-                        type="text"
-                        placeholder="Ej: #10b981"
-                        v-model="form.color"
-                    />
+                    <Label>Color (opcional)</Label>
+                    <ColorPicker v-model="form.color" />
                     <InputError :message="form.errors.color" />
                 </div>
 
