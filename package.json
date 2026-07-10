@@ -10,7 +10,10 @@
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
-        "types:check": "vue-tsc --noEmit"
+        "types:check": "vue-tsc --noEmit",
+        "zip:app": "zip -r laravel.zip app bootstrap config database resources routes",
+        "zip:vendor": "zip -r vendor.zip vendor composer.json composer.lock",
+        "zip:build": "zip -r build.zip public/build"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
