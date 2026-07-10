@@ -317,7 +317,14 @@ return;
                                     <span>{{ movement.description }}</span>
                                 </TableCell>
                                 <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
-                                    {{ movement.category_name ?? 'Sin categoría' }}
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            v-if="movement.category_color"
+                                            class="inline-block size-3 rounded-full shrink-0"
+                                            :style="{ backgroundColor: movement.category_color }"
+                                        />
+                                        {{ movement.category_name ?? 'Sin categoría' }}
+                                    </div>
                                 </TableCell>
                                 <TableCell
                                     :class="[densityClass.cell, 'text-right font-medium tabular-nums', movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
@@ -415,7 +422,14 @@ return;
                                     </div>
                                 </TableCell>
                                 <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
-                                    {{ movement.category_name ?? 'Sin categoría' }}
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            v-if="movement.category_color"
+                                            class="inline-block size-3 rounded-full shrink-0"
+                                            :style="{ backgroundColor: movement.category_color }"
+                                        />
+                                        {{ movement.category_name ?? 'Sin categoría' }}
+                                    </div>
                                 </TableCell>
                                 <TableCell
                                     :class="[densityClass.cell, 'text-right font-medium tabular-nums', movement.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"

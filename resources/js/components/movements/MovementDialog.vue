@@ -30,6 +30,7 @@ export interface MovementData {
     description: string;
     category_id: number | null;
     category_name: string | null;
+    category_color: string | null;
     amount: number;
     running_balance: number;
     is_projected: boolean;

@@ -62,6 +62,7 @@ class MovementController extends Controller
                 'description' => $movement->description,
                 'category_id' => $movement->category_id,
                 'category_name' => $movement->category?->name,
+                'category_color' => $movement->category?->color,
                 'amount' => (float) $movement->amount,
                 'is_projected' => $isProjected,
                 'notes' => $movement->notes,

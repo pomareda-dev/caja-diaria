@@ -26,6 +26,7 @@ export interface ProjectionItem {
     description: string;
     category_id: number | null;
     category_name: string | null;
+    category_color: string | null;
     amount: number;
     source: string;
     is_projected: boolean;
@@ -142,7 +143,14 @@ function formatSign(value: number): string {
                             </div>
                         </TableCell>
                         <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
-                            {{ item.category_name ?? 'Sin categoría' }}
+                            <div class="flex items-center gap-2">
+                                <span
+                                    v-if="item.category_color"
+                                    class="inline-block size-3 rounded-full shrink-0"
+                                    :style="{ backgroundColor: item.category_color }"
+                                />
+                                {{ item.category_name ?? 'Sin categoría' }}
+                            </div>
                         </TableCell>
                         <TableCell :class="densityClass.cell">
                             <span class="text-xs text-muted-foreground">
