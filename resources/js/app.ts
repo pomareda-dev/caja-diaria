@@ -26,7 +26,9 @@ createInertiaApp({
     },
 });
 
-// This will set light / dark mode on page load...
+// Set light/dark mode + design-system theme from the server-rendered
+// Inertia <script data-page> tag. Runs synchronously before Vue mounts
+// so the correct theme is applied with no flash.
 initializeTheme();
 
 // This will listen for flash toast data from the server...

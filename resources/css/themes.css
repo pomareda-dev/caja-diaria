@@ -1,6 +1,10 @@
 /*
  * Design-system themes — sourced from resources/themes/*.css
  * Each block is a scoped extraction: :root -> .theme-xxx, .dark -> .theme-xxx.dark
+ * Works with CSS cascade layers: :root and .dark in app.css are wrapped in
+ * @layer base, so unlayered .theme-xxx always wins on <html> regardless of
+ * specificity or source order. Each .theme-xxx also works on preview buttons
+ * because direct declarations always beat inherited values.
  * Font tokens (--font-sans/serif/mono) stripped; app keeps Instrument Sans.
  * Source-of-truth: resources/themes/*.css (tweakcn originals)
  */

@@ -1,7 +1,6 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
 import type { Appearance, ResolvedAppearance } from '@/types';
-import { router } from '@inertiajs/vue3';
 
 export type { Appearance, ResolvedAppearance };
 
@@ -44,7 +43,9 @@ function applyPalette(key: string): void {
 
     const el = document.documentElement;
 
-    for (const cls of el.classList) {
+    // Snapshot the live DOMTokenList before mutating it:
+    // removing classes mid-iteration would skip elements.
+    for (const cls of Array.from(el.classList)) {
         if (cls.startsWith('theme-')) {
             el.classList.remove(cls);
         }
@@ -161,25 +162,38 @@ export function initializeTheme(): void {
 
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 
-    // Apply palette from Inertia shared props (fallback to 'default')
+    // Read theme from Inertia's server-rendered <script data-page> tag.
+    // This is available synchronously before any JS executes and avoids
+    // the need for router.page (which doesn't exist in Inertia v3's Router).
     let initialTheme: string = 'default';
 
     try {
-        const r = router as unknown as { page: { props: Record<string, unknown> } };
+        const scriptEl = document.querySelector(
+            'script[data-page="app"][type="application/json"]',
+        );
 
-        const auth = r.page?.props?.auth as Record<string, unknown> | undefined;
-        const user = auth?.user as Record<string, unknown> | undefined;
-        const settings = user?.settings as Record<string, unknown> | undefined;
-        const pageTheme = settings?.theme;
+        if (scriptEl?.textContent) {
+            const pageData = JSON.parse(scriptEl.textContent) as {
+                props?: {
+                    auth?: {
+                        user?: {
+                            settings?: Record<string, unknown>;
+                        };
+                    };
+                };
+            };
 
-        if (pageTheme && typeof pageTheme === 'string') {
-            // Defensive check: reject stale/legacy keys gracefully
-            initialTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
-                ? pageTheme
-                : 'default';
+            const pageTheme = pageData?.props?.auth?.user?.settings?.theme;
+
+            if (pageTheme && typeof pageTheme === 'string') {
+                // Defensive check: reject stale/legacy keys gracefully
+                initialTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
+                    ? pageTheme
+                    : 'default';
+            }
         }
     } catch {
-        // router.page not yet available — use default
+        // DOM parse failed — use default
     }
 
     themeKey.value = initialTheme;
