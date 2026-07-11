@@ -527,10 +527,10 @@ defecto.
 
 **Criterios de aceptación**
 
-- [ ] `php artisan test` en verde.
-- [ ] App corre localmente con datos persistentes.
-- [ ] README explica cómo arrancar desde cero.
-- [ ] Notas de despliegue futuro documentadas (sin ejecutar).
+- [x] `php artisan test` en verde (242 tests, 1173 assertions).
+- [x] App corre localmente con datos persistentes.
+- [x] README explica cómo arrancar desde cero (`README.md`).
+- [x] Notas de despliegue futuro documentadas (sin ejecutar) (`DEPLOY.md`).
 
 **Commits:** `test: e2e flow coverage`,
 `feat: keyboard shortcuts and delete confirmations`,
@@ -566,7 +566,7 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 
 - Las fases 4 y 5 pueden hacerse en paralelo (no dependen entre sí).
 - La Fase 8 (personalización) depende de tener auth y layout listos (fases 0–7).
-- Las fases 0–7 están completadas; el trabajo continúa en la Fase 8.
+- **Las fases 0–9 están completadas.** Primera etapa cerrada.
 
 ---
 
@@ -605,8 +605,9 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 1. ~~Confirmar las decisiones de arquitectura de la §3~~ → **hecho** (ver §10).
 2. ~~Ejecutar Fase 0~~ → **hecho**.
 3. ~~Validar el modelo contra datos reales~~ → **hecho** (fases 0–7 completadas).
-4. Ejecutar **Fase 8** (personalización y preferencias).
-5. Luego **Fase 9** (pulido y tests finales).
+4. ~~Ejecutar **Fase 8** (personalización y preferencias)~~ → **hecho**.
+5. ~~Luego **Fase 9** (pulido y tests finales)~~ → **hecho**.
+6. ~~Fase 9 cerrada: 242 tests, README + DEPLOY.md, atajos de teclado~~ → **hecho**.
 
 ---
 
@@ -622,5 +623,5 @@ Fase 2 (layout)  ──► Fase 3 (movimientos)  ──► Fase 4 (categorías)
 | Theming      | 8 paletas preset vía CSS variables + class swap en `<html>`; ortogonal a light/dark | No se almacenan colores crudos; reutiliza el sistema de CSS vars de shadcn-vue                                                 |
 | Import Excel | **Descartado**                                                                      | El usuario no necesita migrar datos históricos; la Fase 8 original se reemplaza por personalización                            |
 
-Con estas decisiones consolidadas, las fases 0–7 están completadas y el plan
-avanza con la **Fase 8** (personalización) y **Fase 9** (pulido).
+Con estas decisiones consolidadas, las fases 0–9 están completadas y la
+primera etapa del proyecto está cerrada.
