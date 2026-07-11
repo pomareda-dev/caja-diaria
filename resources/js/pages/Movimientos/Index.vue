@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical } from '@lucide/vue';
 import { ref, computed } from 'vue';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import draggable from 'vuedraggable';
 import MovementDialog from '@/components/movements/MovementDialog.vue';
 import type { MovementData, CategoryData } from '@/components/movements/MovementDialog.vue';
@@ -104,6 +105,15 @@ function openCreate() {
     editingMovement.value = null;
     showCreateDialog.value = true;
 }
+
+// --- Keyboard shortcuts ---
+useKeyboardShortcuts([
+    { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
+    { key: 'ArrowRight', handler: () => navigateMonth(1) },
+    { key: 'n', handler: () => openCreate(), ignoreShift: true },
+], {
+    isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
+});
 
 function openEdit(movement: MovementData) {
     editingMovement.value = movement;
@@ -227,6 +237,7 @@ return;
                     size="icon"
                     @click="navigateMonth(-1)"
                     aria-label="Mes anterior"
+                    title="Mes anterior (←)"
                 >
                     <ChevronLeft class="size-4" />
                 </Button>
@@ -240,6 +251,7 @@ return;
                     size="icon"
                     @click="navigateMonth(1)"
                     aria-label="Mes siguiente"
+                    title="Mes siguiente (→)"
                 >
                     <ChevronRight class="size-4" />
                 </Button>
@@ -254,7 +266,7 @@ return;
                 </Button>
             </div>
 
-            <Button @click="openCreate">
+            <Button @click="openCreate" title="Nuevo movimiento (N)">
                 <Plus class="size-4 mr-1" />
                 Nuevo movimiento
             </Button>

@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { computed } from 'vue';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -101,6 +102,12 @@ function goToToday() {
     });
 }
 
+// --- Keyboard shortcuts ---
+useKeyboardShortcuts([
+    { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
+    { key: 'ArrowRight', handler: () => navigateMonth(1) },
+]);
+
 // --- Progress bar helpers ---
 function progressPercentage(cat: BudgetCategory): number {
     if (!cat.monthly_limit || cat.monthly_limit <= 0) {
@@ -151,6 +158,7 @@ function formatDate(dateStr: string): string {
                 size="icon"
                 @click="navigateMonth(-1)"
                 aria-label="Mes anterior"
+                title="Mes anterior (←)"
             >
                 <ChevronLeft class="size-4" />
             </Button>
@@ -164,6 +172,7 @@ function formatDate(dateStr: string): string {
                 size="icon"
                 @click="navigateMonth(1)"
                 aria-label="Mes siguiente"
+                title="Mes siguiente (→)"
             >
                 <ChevronRight class="size-4" />
             </Button>

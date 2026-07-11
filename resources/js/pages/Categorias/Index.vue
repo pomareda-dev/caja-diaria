@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from '@lucide/vue';
 import { ref, computed } from 'vue';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import CategoryDialog from '@/components/categories/CategoryDialog.vue';
 import type { CategoryData } from '@/components/categories/CategoryDialog.vue';
 import { Badge } from '@/components/ui/badge';
@@ -130,6 +131,14 @@ function openCreate() {
     showCreateDialog.value = true;
 }
 
+// --- Keyboard shortcuts ---
+useKeyboardShortcuts([
+    { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
+    { key: 'ArrowRight', handler: () => navigateMonth(1) },
+], {
+    isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
+});
+
 function openEdit(category: CategoryData) {
     editingCategory.value = category;
     showCreateDialog.value = true;
@@ -179,6 +188,7 @@ return;
                     size="icon"
                     @click="navigateMonth(-1)"
                     aria-label="Mes anterior"
+                    title="Mes anterior (←)"
                 >
                     <ChevronLeft class="size-4" />
                 </Button>
@@ -192,6 +202,7 @@ return;
                     size="icon"
                     @click="navigateMonth(1)"
                     aria-label="Mes siguiente"
+                    title="Mes siguiente (→)"
                 >
                     <ChevronRight class="size-4" />
                 </Button>
