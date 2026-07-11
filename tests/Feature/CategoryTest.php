@@ -166,6 +166,43 @@ test('user cannot delete another users category', function () {
     $this->assertModelExists($category);
 });
 
+test('deleting_category_with_movements_sets_category_id_null', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->expense()->create([
+        'user_id' => $user->id,
+        'name' => 'Mercado',
+    ]);
+
+    $movement1 = Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-05',
+        'amount' => -100,
+        'source' => 'manual',
+    ]);
+
+    $movement2 = Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-10',
+        'amount' => -200,
+        'source' => 'manual',
+    ]);
+
+    $response = $this->delete(route('categorias.destroy', $category));
+
+    $response->assertRedirect();
+    $this->assertModelMissing($category);
+
+    $movement1->refresh();
+    $movement2->refresh();
+
+    expect($movement1->category_id)->toBeNull();
+    expect($movement2->category_id)->toBeNull();
+});
+
 // ─── Validation ───────────────────────────────────────────────────
 
 test('validation: name is required', function () {
