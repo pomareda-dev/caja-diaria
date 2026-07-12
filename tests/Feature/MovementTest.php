@@ -630,7 +630,7 @@ test('reorder_happy_path', function () {
     expect($b->sort_order)->toBe(3);
 });
 
-test('reorder_rejects_mixed_dates', function () {
+test('reorder_assigns_sort_order_per_date_group', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -653,7 +653,13 @@ test('reorder_rejects_mixed_dates', function () {
         'ids' => [$movementA->id, $movementB->id],
     ]);
 
-    $response->assertStatus(422);
+    $response->assertRedirect();
+
+    $movementA->refresh();
+    $movementB->refresh();
+
+    expect($movementA->sort_order)->toBe(1);
+    expect($movementB->sort_order)->toBe(1);
 });
 
 test('reorder_rejects_cross_user', function () {

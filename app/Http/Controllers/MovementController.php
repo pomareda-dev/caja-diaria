@@ -195,24 +195,22 @@ class MovementController extends Controller
             abort(403);
         }
 
-        // Validate all share the same date and is_projected
-        $firstDate = $movements->first()->date->toDateString();
-        $firstProjected = (bool) $movements->first()->is_projected;
-
-        $allSameGroup = $movements->every(function (Movement $movement) use ($firstDate, $firstProjected) {
-            return $movement->date->toDateString() === $firstDate
-                && (bool) $movement->is_projected === $firstProjected;
-        });
-
-        if (! $allSameGroup) {
-            abort(422);
-        }
-
-        // Reassign sort_order atomically (skip single-row — idempotent)
+        // Reassign sort_order per (date, is_projected) group atomically
         if (count($ids) > 1) {
-            DB::transaction(function () use ($ids): void {
-                foreach ($ids as $index => $id) {
-                    Movement::where('id', $id)->update(['sort_order' => $index + 1]);
+            DB::transaction(function () use ($ids, $movements): void {
+                $keyed = $movements->keyBy('id');
+                $counters = [];
+
+                foreach ($ids as $id) {
+                    $movement = $keyed[$id];
+                    $groupKey = $movement->date->toDateString().'|'.(int) $movement->is_projected;
+
+                    if (! isset($counters[$groupKey])) {
+                        $counters[$groupKey] = 0;
+                    }
+
+                    $counters[$groupKey]++;
+                    Movement::where('id', $id)->update(['sort_order' => $counters[$groupKey]]);
                 }
             });
         }
