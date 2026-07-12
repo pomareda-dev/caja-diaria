@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical } from '@lucide/vue';
 import { ref, computed } from 'vue';
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import draggable from 'vuedraggable';
 import CategoryDialog from '@/components/categories/CategoryDialog.vue';
 import type { CategoryData } from '@/components/categories/CategoryDialog.vue';
 import { Badge } from '@/components/ui/badge';
@@ -17,13 +17,13 @@ import {
 } from '@/components/ui/dialog';
 import {
     Table,
-    TableBody,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { useSettings } from '@/composables/useSettings';
 import categorias from '@/routes/categorias';
 
@@ -131,6 +131,23 @@ function openCreate() {
     showCreateDialog.value = true;
 }
 
+function onReorder() {
+    const ids = props.categories.map((c) => c.id);
+
+    if (ids.length <= 1) {
+        return;
+    }
+
+    router.patch(categorias.reorder.url(), {
+        ids,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            /* flash success handled by server */
+        },
+    });
+}
+
 // --- Keyboard shortcuts ---
 useKeyboardShortcuts([
     { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
@@ -228,6 +245,7 @@ return;
             <Table>
                 <TableHeader>
                     <TableRow>
+                        <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
                         <TableHead :class="densityClass.header">Tipo</TableHead>
                         <TableHead :class="densityClass.header">Nombre</TableHead>
                         <TableHead :class="[densityClass.header, 'text-right']">Balance</TableHead>
@@ -236,102 +254,112 @@ return;
                         <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
                     </TableRow>
                 </TableHeader>
-                <TableBody>
-                    <TableRow
-                        v-for="cat in categories"
-                        :key="cat.id"
-                        class="group"
-                    >
-                        <TableCell :class="densityClass.cell">
-                            <Badge :variant="kindBadgeVariant[cat.kind] as any">
-                                {{ kindLabels[cat.kind] }}
-                            </Badge>
-                        </TableCell>
-                        <TableCell :class="[densityClass.cell, 'font-medium']">
-                            <div class="flex items-center gap-2">
-                                <span
-                                    v-if="cat.color"
-                                    class="inline-block size-3 rounded-full shrink-0"
-                                    :style="{ backgroundColor: cat.color }"
-                                />
-                                {{ cat.name }}
-                            </div>
-                        </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums', cat.balance > 0 ? 'text-green-600 dark:text-green-400' : cat.balance < 0 ? 'text-red-600 dark:text-red-400' : '']">
-                            {{ formatSign(cat.balance) }}
-                        </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-right tabular-nums text-muted-foreground']">
-                            {{ cat.monthly_limit !== null ? format(cat.monthly_limit) : '—' }}
-                        </TableCell>
-                        <TableCell :class="densityClass.cell">
-                            <div v-if="cat.monthly_limit !== null && cat.monthly_limit > 0" class="flex items-center gap-3">
-                                <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                                    <div
-                                        class="h-full rounded-full transition-all duration-300"
-                                        :class="progressColor(progressPercentage(cat))"
-                                        :style="{ width: Math.min(progressPercentage(cat), 100) + '%' }"
+                <draggable
+                    :list="categories"
+                    item-key="id"
+                    tag="tbody"
+                    :handle="'.drag-handle'"
+                    :animation="150"
+                    @end="onReorder"
+                >
+                    <template #item="{ element: cat }">
+                        <TableRow class="group">
+                            <TableCell class="p-0 pl-2">
+                                <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                            </TableCell>
+                            <TableCell :class="densityClass.cell">
+                                <Badge :variant="kindBadgeVariant[cat.kind] as any">
+                                    {{ kindLabels[cat.kind] }}
+                                </Badge>
+                            </TableCell>
+                            <TableCell :class="[densityClass.cell, 'font-medium']">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        v-if="cat.color"
+                                        class="inline-block size-3 rounded-full shrink-0"
+                                        :style="{ backgroundColor: cat.color }"
                                     />
+                                    {{ cat.name }}
+                                </div>
+                            </TableCell>
+                            <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums', cat.balance > 0 ? 'text-green-600 dark:text-green-400' : cat.balance < 0 ? 'text-red-600 dark:text-red-400' : '']">
+                                {{ formatSign(cat.balance) }}
+                            </TableCell>
+                            <TableCell :class="[densityClass.cell, 'text-right tabular-nums text-muted-foreground']">
+                                {{ cat.monthly_limit !== null ? format(cat.monthly_limit) : '—' }}
+                            </TableCell>
+                            <TableCell :class="densityClass.cell">
+                                <div v-if="cat.monthly_limit !== null && cat.monthly_limit > 0" class="flex items-center gap-3">
+                                    <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                        <div
+                                            class="h-full rounded-full transition-all duration-300"
+                                            :class="progressColor(progressPercentage(cat))"
+                                            :style="{ width: Math.min(progressPercentage(cat), 100) + '%' }"
+                                        />
+                                    </div>
+                                    <span
+                                        class="text-xs font-medium tabular-nums shrink-0"
+                                        :class="{
+                                            'text-red-600 dark:text-red-400': progressPercentage(cat) > 100,
+                                            'text-amber-600 dark:text-amber-400': progressPercentage(cat) >= 75 && progressPercentage(cat) <= 100,
+                                            'text-green-600 dark:text-green-400': progressPercentage(cat) < 75,
+                                        }"
+                                    >
+                                        {{ Math.round(progressPercentage(cat)) }}%
+                                    </span>
                                 </div>
                                 <span
-                                    class="text-xs font-medium tabular-nums shrink-0"
-                                    :class="{
-                                        'text-red-600 dark:text-red-400': progressPercentage(cat) > 100,
-                                        'text-amber-600 dark:text-amber-400': progressPercentage(cat) >= 75 && progressPercentage(cat) <= 100,
-                                        'text-green-600 dark:text-green-400': progressPercentage(cat) < 75,
-                                    }"
+                                    v-else
+                                    class="text-xs text-muted-foreground"
                                 >
-                                    {{ Math.round(progressPercentage(cat)) }}%
+                                    Sin límite
                                 </span>
-                            </div>
-                            <span
-                                v-else
-                                class="text-xs text-muted-foreground"
-                            >
-                                Sin límite
-                            </span>
-                        </TableCell>
-                        <TableCell :class="densityClass.cell">
-                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    class="size-8"
-                                    @click="openEdit(cat)"
-                                    aria-label="Editar categoría"
-                                >
-                                    <Pencil class="size-3.5" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                    @click="confirmDelete(cat)"
-                                    aria-label="Eliminar categoría"
-                                >
-                                    <Trash2 class="size-3.5" />
-                                </Button>
-                            </div>
-                        </TableCell>
-                    </TableRow>
+                            </TableCell>
+                            <TableCell :class="densityClass.cell">
+                                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8"
+                                        @click="openEdit(cat)"
+                                        aria-label="Editar categoría"
+                                    >
+                                        <Pencil class="size-3.5" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                        @click="confirmDelete(cat)"
+                                        aria-label="Eliminar categoría"
+                                    >
+                                        <Trash2 class="size-3.5" />
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </template>
 
-                    <!-- Empty state -->
-                    <TableRow v-if="categories.length === 0">
-                        <TableCell
-                            colspan="6"
-                            class="text-center py-12 text-muted-foreground"
-                        >
-                            No hay categorías.
-                            <br>
-                            <Button
-                                variant="link"
-                                class="mt-1"
-                                @click="openCreate"
+                    <template #footer>
+                        <!-- Empty state -->
+                        <TableRow v-if="categories.length === 0">
+                            <TableCell
+                                colspan="7"
+                                class="text-center py-12 text-muted-foreground"
                             >
-                                Crear la primera categoría
-                            </Button>
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
+                                No hay categorías.
+                                <br>
+                                <Button
+                                    variant="link"
+                                    class="mt-1"
+                                    @click="openCreate"
+                                >
+                                    Crear la primera categoría
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    </template>
+                </draggable>
             </Table>
         </div>
     </div>

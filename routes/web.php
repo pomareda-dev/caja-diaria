@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('categorias', [CategoryController::class, 'index'])->name('categorias.index');
     Route::post('categorias', [CategoryController::class, 'store'])->name('categorias.store');
+    Route::patch('categorias/reorder', [CategoryController::class, 'reorder'])->name('categorias.reorder');
     Route::put('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.update');
     Route::patch('categorias/{category}', [CategoryController::class, 'update'])->name('categorias.patch');
     Route::delete('categorias/{category}', [CategoryController::class, 'destroy'])->name('categorias.destroy');

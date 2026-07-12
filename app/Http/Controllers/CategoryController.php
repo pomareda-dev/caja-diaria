@@ -8,6 +8,7 @@ use App\Models\Movement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -103,6 +104,41 @@ class CategoryController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Categoría actualizada correctamente.',
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Reorder categories by reassigning sort_order sequentially.
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:categories,id'],
+        ]);
+
+        $ids = $validated['ids'];
+        $categories = Category::whereIn('id', $ids)
+            ->where('user_id', $request->user()->id)
+            ->get();
+
+        if ($categories->count() !== count($ids)) {
+            abort(403);
+        }
+
+        if (count($ids) > 1) {
+            DB::transaction(function () use ($ids): void {
+                foreach ($ids as $index => $id) {
+                    Category::where('id', $id)->update(['sort_order' => $index + 1]);
+                }
+            });
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Orden actualizado correctamente.',
         ]);
 
         return back();
