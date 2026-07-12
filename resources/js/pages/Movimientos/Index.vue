@@ -448,7 +448,7 @@ return;
                                 >
                                     {{ formatSigned(movement.amount) }}
                                 </TableCell>
-                                <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums text-muted-foreground']">
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums', projectedBalances[index] >= 0 ? 'text-muted-foreground' : 'text-red-600/60 dark:text-red-400/60']">
                                     {{ format(projectedBalances[index]) }}
                                 </TableCell>
                                 <TableCell :class="densityClass.cell">
