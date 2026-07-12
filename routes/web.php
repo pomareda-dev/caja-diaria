@@ -28,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('categorias/{category}', [CategoryController::class, 'destroy'])->name('categorias.destroy');
     Route::get('cuentas', [AccountController::class, 'index'])->name('cuentas.index');
     Route::post('cuentas', [AccountController::class, 'store'])->name('cuentas.store');
+    Route::patch('cuentas/reorder', [AccountController::class, 'reorder'])->name('cuentas.reorder');
     Route::put('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.update');
     Route::patch('cuentas/{account}', [AccountController::class, 'update'])->name('cuentas.patch');
     Route::delete('cuentas/{account}', [AccountController::class, 'destroy'])->name('cuentas.destroy');

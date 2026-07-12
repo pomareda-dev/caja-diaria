@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Movement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -81,6 +82,41 @@ class AccountController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Cuenta actualizada correctamente.',
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Reorder accounts by reassigning sort_order sequentially.
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:accounts,id'],
+        ]);
+
+        $ids = $validated['ids'];
+        $accounts = Account::whereIn('id', $ids)
+            ->where('user_id', $request->user()->id)
+            ->get();
+
+        if ($accounts->count() !== count($ids)) {
+            abort(403);
+        }
+
+        if (count($ids) > 1) {
+            DB::transaction(function () use ($ids): void {
+                foreach ($ids as $index => $id) {
+                    Account::where('id', $id)->update(['sort_order' => $index + 1]);
+                }
+            });
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Orden actualizado correctamente.',
         ]);
 
         return back();
