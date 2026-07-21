@@ -398,7 +398,7 @@ test('spent only counts actual movements not projected', function () {
     Carbon::setTestNow();
 });
 
-test('spent only counts negative amounts', function () {
+test('spent reflects net spending including refunds for expense categories', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -408,7 +408,7 @@ test('spent only counts negative amounts', function () {
         'sort_order' => 0,
     ]);
 
-    // Expense
+    // Expense: -50
     Movement::factory()->create([
         'user_id' => $user->id,
         'category_id' => $category->id,
@@ -417,7 +417,7 @@ test('spent only counts negative amounts', function () {
         'source' => 'manual',
     ]);
 
-    // Income in same category — should NOT count as spent
+    // Income/refund in same category: +200 (more income than expense)
     Movement::factory()->create([
         'user_id' => $user->id,
         'category_id' => $category->id,
@@ -428,10 +428,54 @@ test('spent only counts negative amounts', function () {
 
     Carbon::setTestNow(Carbon::parse('2026-07-15'));
 
+    // Balance = -50 + 200 = +150 → net is positive, so spent = 0
     $response = $this->get(route('categorias.index', ['month' => '2026-07']));
 
     $response->assertInertia(fn ($page) => $page
-        ->where('categories.0.spent', 50)
+        ->where('categories.0.spent', 0)
+        ->where('categories.0.balance', 150)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('spent nets expenses and refunds when net is still negative', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $category = Category::factory()->expense()->withLimit(500)->create([
+        'user_id' => $user->id,
+        'name' => 'Mercado',
+        'sort_order' => 0,
+    ]);
+
+    // Expense: -300
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-05',
+        'amount' => -300,
+        'source' => 'manual',
+    ]);
+
+    // Partial refund: +50
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'category_id' => $category->id,
+        'date' => '2026-07-10',
+        'amount' => 50,
+        'source' => 'manual',
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Balance = -300 + 50 = -250 → spent = abs(-250) = 250
+    // Old bug would show spent = 300 (only negative amounts, ignoring refund)
+    $response = $this->get(route('categorias.index', ['month' => '2026-07']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('categories.0.spent', 250)
+        ->where('categories.0.balance', -250)
     );
 
     Carbon::setTestNow();

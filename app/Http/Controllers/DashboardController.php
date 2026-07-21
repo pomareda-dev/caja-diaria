@@ -66,15 +66,17 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Spent = net spending for expense categories (abs of negative net, 0 otherwise).
+        // Using SUM(amount) instead of SUM(ABS(amount)) so refunds/income in the
+        // same category properly offset spending for budget progress.
         $spentByCategory = Movement::where('user_id', $userId)
             ->whereIn('category_id', $categoriesWithLimit->pluck('id'))
             ->whereBetween('date', [$monthStart, $monthEnd])
             ->where('date', '<=', $today)
-            ->where('amount', '<', 0)
             ->where('is_projected', false)
             ->groupBy('category_id')
-            ->selectRaw('category_id, SUM(ABS(amount)) as spent')
-            ->pluck('spent', 'category_id');
+            ->selectRaw('category_id, SUM(amount) as net')
+            ->pluck('net', 'category_id');
 
         $budgetOverview = $categoriesWithLimit
             ->map(fn (Category $cat) => [
@@ -82,7 +84,7 @@ class DashboardController extends Controller
                 'name' => $cat->name,
                 'color' => $cat->color,
                 'monthly_limit' => (float) $cat->monthly_limit,
-                'spent' => (float) ($spentByCategory->get($cat->id) ?? 0),
+                'spent' => max(0, -(float) ($spentByCategory->get($cat->id) ?? 0)),
             ])
             ->sortByDesc('spent')
             ->take(5)

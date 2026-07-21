@@ -29,19 +29,6 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Batch compute actual spent per category for the selected month
-        $spentByCategory = Movement::where('user_id', $request->user()->id)
-            ->whereIn('category_id', $categories->pluck('id'))
-            ->whereBetween('date', [
-                $selectedMonth->copy()->startOfMonth()->toDateString(),
-                $selectedMonth->copy()->endOfMonth()->toDateString(),
-            ])
-            ->where('date', '<=', Carbon::now()->toDateString())
-            ->where('amount', '<', 0)
-            ->groupBy('category_id')
-            ->selectRaw('category_id, SUM(ABS(amount)) as spent')
-            ->pluck('spent', 'category_id');
-
         // Batch compute balance (income - expenses) per category for the selected month
         $balanceByCategory = Movement::where('user_id', $request->user()->id)
             ->whereIn('category_id', $categories->pluck('id'))
@@ -55,15 +42,27 @@ class CategoryController extends Controller
             ->selectRaw('category_id, SUM(amount) as balance')
             ->pluck('balance', 'category_id');
 
-        $categoriesWithBudget = $categories->map(function (Category $cat) use ($spentByCategory, $balanceByCategory) {
+        $categoriesWithBudget = $categories->map(function (Category $cat) use ($balanceByCategory) {
+            $balance = (float) ($balanceByCategory->get($cat->id) ?? 0);
+
+            // Derive spent from balance so the progress bar matches the balance column:
+            // - expense categories: net spending = abs(balance) when balance < 0, else 0
+            // - income categories: net earning = balance when balance > 0, else 0
+            // - transfer / others: abs(balance) as a neutral fallback
+            $spent = match ($cat->kind) {
+                'expense' => max(0, -$balance),
+                'income' => max(0, $balance),
+                default => abs($balance),
+            };
+
             return [
                 'id' => $cat->id,
                 'name' => $cat->name,
                 'kind' => $cat->kind,
                 'color' => $cat->color,
                 'monthly_limit' => $cat->monthly_limit ? (float) $cat->monthly_limit : null,
-                'spent' => (float) ($spentByCategory->get($cat->id) ?? 0),
-                'balance' => (float) ($balanceByCategory->get($cat->id) ?? 0),
+                'spent' => $spent,
+                'balance' => $balance,
                 'sort_order' => $cat->sort_order,
             ];
         });
