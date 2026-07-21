@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -64,11 +64,17 @@ function populateFormForEdit(account: AccountData) {
     form.sort_order = String(account.sort_order);
 }
 
+const balanceInput = ref<InstanceType<typeof Input> | null>(null);
+
 watch(
     () => props.open,
     (isOpen) => {
         if (isOpen && props.account) {
             populateFormForEdit(props.account);
+            nextTick(() => {
+                // Focus the balance input when editing an existing account
+                balanceInput.value?.$el?.focus();
+            });
         }
     },
 );
@@ -161,6 +167,7 @@ const kindLabels: Record<string, string> = {
                     <Label for="balance">Saldo</Label>
                     <Input
                         id="balance"
+                        ref="balanceInput"
                         type="number"
                         step="0.01"
                         placeholder="0.00"
