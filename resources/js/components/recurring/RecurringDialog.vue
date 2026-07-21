@@ -239,8 +239,7 @@ function submit() {
                 <div class="flex items-center gap-2">
                     <Checkbox
                         id="active"
-                        :checked="form.active"
-                        @update:checked="form.active = $event"
+                        v-model="form.active"
                     />
                     <Label for="active" class="text-sm font-normal leading-none cursor-pointer">
                         Activo

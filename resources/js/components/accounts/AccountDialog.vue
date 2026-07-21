@@ -193,8 +193,7 @@ const kindLabels: Record<string, string> = {
                 <div class="flex items-center gap-2">
                     <Checkbox
                         id="exclude_from_reconciliation"
-                        :checked="form.exclude_from_reconciliation"
-                        @update:checked="form.exclude_from_reconciliation = $event"
+                        v-model="form.exclude_from_reconciliation"
                     />
                     <Label for="exclude_from_reconciliation" class="text-sm font-normal leading-none cursor-pointer">
                         Excluir de conciliación
