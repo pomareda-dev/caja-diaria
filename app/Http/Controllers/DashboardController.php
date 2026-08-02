@@ -35,7 +35,6 @@ class DashboardController extends Controller
             ->whereBetween('date', [$monthStart, $monthEnd])
             ->where('date', '<=', $today)
             ->where('amount', '>', 0)
-            ->whereIn('source', ['manual', 'import'])
             ->where('is_projected', false)
             ->sum('amount');
 
@@ -44,7 +43,6 @@ class DashboardController extends Controller
             ->whereBetween('date', [$monthStart, $monthEnd])
             ->where('date', '<=', $today)
             ->where('amount', '<', 0)
-            ->whereIn('source', ['manual', 'import'])
             ->where('is_projected', false)
             ->sum('amount');
 

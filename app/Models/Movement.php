@@ -82,21 +82,20 @@ class Movement extends Model
         $query->where('date', '>', now()->toDateString());
     }
 
+    /**
+     * Opening balance before a month: the sum of all real movements
+     * (is_projected=false) dated before the month start, regardless of source.
+     */
     public static function openingBalance(Carbon $monthStart, int $userId): string
     {
         $sum = static::where('user_id', $userId)
             ->where('date', '<', $monthStart->toDateString())
-            ->whereIn('source', ['manual', 'import'])
             ->where('is_projected', false)
             ->sum('amount');
 
         return number_format((float) ($sum ?? 0), 2, '.', '');
     }
 
-    /**
-     * Calculate the real balance up to today for a user.
-     * Sums all real (manual, import) movements with date <= today.
-     */
     public static function nextSortOrder(int $userId, string $date, bool $isProjected): int
     {
         return (int) static::where('user_id', $userId)
@@ -105,11 +104,15 @@ class Movement extends Model
             ->max('sort_order') + 1;
     }
 
+    /**
+     * Real balance up to today: the sum of all real movements
+     * (is_projected=false) with date <= today, regardless of source.
+     * Recurring-generated rows count once they are marked as real.
+     */
     public static function realBalance(int $userId): string
     {
         $sum = static::where('user_id', $userId)
             ->where('date', '<=', now()->toDateString())
-            ->whereIn('source', ['manual', 'import'])
             ->where('is_projected', false)
             ->sum('amount');
 
