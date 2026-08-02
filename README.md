@@ -1,15 +1,219 @@
 # Caja Diaria
 
-Personal expense tracker and financial projection app. Replaces the
-`proyeccion-2026.xlsx` Google Sheets workflow with a local-first Laravel app
-that records daily movements, projects future balances, tracks budgets per
-category, and reconciles account snapshots.
+**Sé dueño de tu plata.** Un tracker de gastos personales con proyección
+financiera que reemplaza las planillas de Google Sheets con una aplicación
+local y rápida. Registrá movimientos diarios, proyectá tu saldo futuro,
+controlá presupuestos por categoría y reconciliá tus cuentas — todo en
+soles peruanos (PEN).
 
-Single-user, single-currency (PEN), SQLite, local-only.
+---
 
-## Quick start
+## Índice
 
-Requirements: PHP 8.3+, Node 22+, npm.
+- [¿Qué es Caja Diaria?](#qué-es-caja-diaria)
+- [¿Por qué Caja Diaria?](#por-qué-caja-diaria)
+- [Funciones principales](#funciones-principales)
+- [Resumen técnico](#resumen-técnico)
+- [Inicio rápido](#inicio-rápido)
+- [Atajos de teclado](#atajos-de-teclado)
+- [Pruebas](#pruebas)
+- [Comandos útiles](#comandos-útiles)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Documentación](#documentación)
+- [Licencia](#licencia)
+
+---
+
+## ¿Qué es Caja Diaria?
+
+Caja Diaria es una aplicación web monousuario, local-first, que nace del
+dolor real de mantener la planilla `proyeccion-2026.xlsx`: copiar hojas cada
+mes, arrastrar fórmulas frágiles, conciliar cuentas a ojo, y perder el hilo
+de los gastos recurrentes. La aplicación convierte ese flujo artesanal en
+una **línea de tiempo unificada** donde los movimientos reales y los
+proyectados conviven, el saldo se calcula automáticamente, y la proyección
+se regenera con un solo comando.
+
+**Moneda única:** soles peruanos (PEN).  
+**Base de datos:** SQLite local (lista para MySQL en producción).  
+
+---
+
+## ¿Por qué Caja Diaria?
+
+| Con la planilla… | Con Caja Diaria… |
+|---|---|
+| Copiás hojas y arrastrás fórmulas cada mes | Una sola línea de tiempo; los meses se filtran, no se copian |
+| El saldo inicial de cada mes se calcula a mano | El *opening balance* se calcula automáticamente de todos los movimientos reales anteriores |
+| Las fórmulas `INDIRECT` se rompen al insertar o borrar filas | El saldo se recalcula en el servidor en cada request — nunca se descuadra |
+| Los gastos recurrentes se ingresan manualmente mes a mes | Plantillas de transacciones recurrentes que generan movimientos proyectados automáticamente |
+| La conciliación de cuentas es visual («el total de cuentas debería coincidir con el último saldo») | Panel de conciliación automático con ✅/⚠️ y la diferencia exacta |
+| Sin validación ni control de cambios | Validación completa en servidor, historial de registros, sin pérdida de datos |
+| Solo vos podés abrir la planilla | Autenticación con Fortify, datos aislados por usuario, listo para multiusuario |
+| Sin personalización | 8 temas visuales, modo claro/oscuro, densidad de tabla configurable, foto de perfil |
+
+---
+
+## Funciones principales
+
+### 📊 Dashboard
+
+Resumen financiero del mes con **cuatro tarjetas KPI**: saldo real al día
+de hoy, ingresos del mes, gastos del mes, y proyección de cierre de mes.
+Incluye:
+
+- **Resumen de presupuesto** — top 5 categorías de gasto con barras de
+  progreso y alertas visuales (verde, ámbar, rojo)
+- **Mini panel de conciliación** — suma de cuentas vs. saldo real
+- **Próximos 7 días** — lista de movimientos proyectados inminentes
+- **Gráfico de saldo diario** — evolución del *running balance* durante
+  el mes seleccionado
+- Navegación entre meses con `←` / `→`
+
+### 💰 Movimientos
+
+El corazón de la aplicación. CRUD completo de ingresos y gastos con
+**saldo acumulado por fila** que considera todos los movimientos reales
+desde el origen. Dividido en dos secciones:
+
+- **Actuales** — movimientos reales hasta hoy
+- **Proyectados** — movimientos futuros o marcados como proyección
+
+Características clave:
+
+- **Arrastrar y reordenar** movimientos reales dentro de la misma fecha
+- **Conversión inteligente**: si editás un movimiento proyectado y lo
+  volvés real (o viceversa), el `sort_order` se recalcula automáticamente
+- **Opening balance proyectado**: arrastra el cierre proyectado del mes
+  anterior como saldo de apertura del mes actual — ves tu futuro
+  financiero real, no una foto aislada
+- Atajo `N` para nuevo movimiento; `←` / `→` para cambiar de mes
+
+### 🏷️ Categorías
+
+CRUD de categorías con tipo (`expense`, `income`, `transfer`), límite
+mensual opcional, color y orden personalizable. Cada categoría muestra:
+
+- **Balance del mes** — ingresos menos egresos para ese rubro
+- **Barra de progreso** — gasto actual vs. límite mensual, con umbrales
+  de alerta configurables
+- **Reembolsos**: si registrás un ingreso en una categoría de gasto, el
+  sistema lo descuenta del gasto acumulado, no lo ignora
+
+Arrastre para reordenar categorías.
+
+### 🏦 Cuentas
+
+Registro manual de saldos por cuenta (banco, billetera, efectivo,
+crédito, otro). Panel de **conciliación automática** que compara la
+suma de cuentas activas contra el saldo real de movimientos:
+
+- Muestra el total de cuentas, el saldo real, y la diferencia
+- Estado conciliado ✅ o descuadrado ⚠️ con el monto de la diferencia
+- **Exclusión de conciliación**: marcá cuentas como "Liquidación" u
+  otros fondos no disponibles para que no participen en la comparación
+
+### 🔁 Recurrentes
+
+Plantillas de transacciones que se repiten cada mes. Cada plantilla
+define nombre, monto, categoría, día del mes, y mes de inicio/fin
+(opcional). Dos modos de generación:
+
+- **`app:generate-projections`** — genera movimientos proyectados
+  idempotentes (no duplica movimientos ya existentes) para los próximos
+  N meses
+- **`POST /recurrentes/regenerate`** — borra y regenera todas las
+  proyecciones desde las plantillas activas, en una sola transacción
+
+### 🔮 Proyección
+
+Línea de tiempo de todos los movimientos con fecha futura, paginada
+(1/10/25/50/100 por página), con saldo proyectado que **se arrastra
+entre páginas** — lo que ves en la página 2 es la continuación real
+del saldo de la página 1.
+
+Muestra la fuente de cada movimiento (Manual, Recurrente, Importado),
+categoría, monto y saldo proyectado acumulado. El horizonte de
+proyección es configurable por usuario (1 a 24 meses).
+
+### ⚙️ Preferencias
+
+Panel de personalización completo:
+
+- **8 temas visuales** (default, bold-tech, claude, pastel-dreams,
+  quantum-rose, sunny-sprout, twitter, violet-bloom), independientes
+  del modo claro/oscuro
+- **Foto de perfil** con recorte y validación (JPG/PNG/WebP, máx. 2MB)
+- **Densidad de tabla**: compacta o comfortable
+- **Sección de inicio**: qué página cargar después del login
+- **Horizonte de proyección**: de 1 a 24 meses hacia el futuro
+- **Día de inicio de semana**: lunes o domingo
+
+---
+
+## Resumen técnico
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Laravel 13, PHP 8.3 |
+| Autenticación | Laravel Fortify (login, registro, reset de contraseña, actualización de perfil y contraseña) |
+| Frontend | Inertia 3, Vue 3 (Composition API + `<script setup>` + TypeScript) |
+| Estilos | Tailwind CSS v4, shadcn-vue, Reka UI (componentes headless accesibles) |
+| Build | Vite (HMR + SSR en desarrollo) |
+| Base de datos | SQLite (desarrollo local), MySQL-ready para producción |
+| Pruebas | Pest v4, PHPUnit 12 |
+| Tipado frontend | vue-tsc |
+| Formateo PHP | Laravel Pint |
+| Locale | `es_PE`, zona horaria `America/Lima` |
+
+### Arquitectura y decisiones de diseño
+
+**Línea de tiempo unificada.** No hay tablas separadas para movimientos
+reales y proyectados. Existe una sola tabla `movements` con el flag
+`is_projected`. Un movimiento con fecha ≤ hoy es real; con fecha > hoy
+es proyectado. Esto simplifica consultas, evita duplicación de lógica,
+y permite que un movimiento pase de proyectado a real sin migrar de
+tabla.
+
+**Proyección por fecha, no por tipo.** La proyección financiera se
+construye consultando todos los movimientos con fecha futura,
+independientemente de su fuente (manual, recurrente, importado). Las
+plantillas recurrentes son generadoras de movimientos proyectados, no
+una entidad separada en la línea de tiempo.
+
+**Cuentas como snapshots manuales.** Los saldos de cuentas bancarias
+no se derivan de los movimientos; el usuario los ingresa manualmente.
+Esto modela la realidad: el saldo del banco puede diferir del
+acumulado de movimientos por demoras en compensación, comisiones, o
+errores. El panel de conciliación justamente existe para detectar y
+cuantificar esa diferencia.
+
+**Apertura de mes calculada.** El *opening balance* de cualquier mes
+es la suma de todos los movimientos reales con fecha anterior al
+primer día de ese mes. No se almacena; se calcula en cada consulta.
+Esto garantiza que el saldo siempre sea consistente con los datos.
+
+**Idempotencia en proyecciones.** El comando `app:generate-projections`
+verifica la existencia de cada movimiento proyectado por par
+(`recurring_id`, `date`) antes de crearlo. Podés ejecutarlo cuantas
+veces quieras sin duplicar movimientos. El endpoint `regenerate` es
+la variante destructiva: borra todo y regenera desde cero.
+
+### Modelo de datos
+
+| Tabla | Propósito | Relaciones principales |
+|---|---|---|
+| `users` | Autenticación + preferencias (JSON) | — |
+| `categories` | Categorías con tipo y límite mensual | `belongsTo User`, `hasMany Movement`, `hasMany RecurringTransaction` |
+| `accounts` | Snapshots manuales de saldo por cuenta | `belongsTo User` |
+| `movements` | **Tabla central** — todo ingreso, gasto y proyección | `belongsTo User`, `belongsTo Category` (nullable), `belongsTo RecurringTransaction` (nullable) |
+| `recurring_transactions` | Plantillas de transacciones recurrentes | `belongsTo User`, `belongsTo Category` (nullable), `hasMany Movement` |
+
+---
+
+## Inicio rápido
+
+**Requisitos:** PHP 8.3+, Node 22+, npm.
 
 ```bash
 git clone <repo-url> caja-diaria && cd caja-diaria
@@ -23,99 +227,110 @@ npm run dev          # terminal 1 — Vite dev server
 php artisan serve    # terminal 2 — Laravel dev server
 ```
 
-Open http://localhost:8000, register an account, and start tracking.
+Abrí `http://localhost:8000`, registrá una cuenta, y empezá a trackear.
 
-## Features
+---
 
-| Section | What it does |
-|---------|-------------|
-| Dashboard | Monthly summary cards (balance, income, expense, end-of-month projection), budget overview, reconciliation status, upcoming 7-day projections, balance chart |
-| Movimientos | CRUD for income/expense movements with running balance per row, month navigation, real vs. projected split, drag-to-reorder, keyboard shortcuts (`N` = new, `←/→` = change month) |
-| Categorías | CRUD categories with kind (expense/income/transfer), monthly limit, color, balance (income − expenses), budget progress bars |
-| Cuentas | CRUD account snapshots (bank/wallet/cash/credit), reconciliation panel (sum of accounts vs. real balance), Liquidación exclusion |
-| Recurrentes | CRUD recurring transaction templates (name, amount, category, day of month, start/end month) that generate projected movements via `app:generate-projections` |
-| Proyección | Timeline of all movements (real + projected + recurring) with running balance into the future |
-| Preferences | 8 tweakcn design-system themes (light/dark), profile photo, table density, start section, week start day, projection horizon (1–24 months) |
+## Atajos de teclado
 
-## Tech stack
+| Tecla | Acción | Página |
+|---|---|---|
+| `N` | Abrir diálogo de nuevo movimiento | Movimientos |
+| `←` | Mes anterior | Movimientos, Categorías, Dashboard |
+| `→` | Mes siguiente | Movimientos, Categorías, Dashboard |
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Laravel 13, PHP 8.3 |
-| Auth | Laravel Fortify |
-| Frontend | Inertia 3, Vue 3 (Composition API + TypeScript) |
-| Styling | Tailwind CSS v4, shadcn-vue, Reka UI |
-| Build | Vite |
-| Database | SQLite (local), MySQL-ready for production |
-| Testing | Pest v4, PHPUnit 12 |
-| Locale | es_PE, timezone America/Lima |
+Los atajos se suprimen al tipear en campos de texto o cuando hay un
+diálogo abierto.
 
-## Keyboard shortcuts
+---
 
-| Key | Action | Page |
-|-----|--------|------|
-| `N` | Open new-movement dialog | Movimientos |
-| `←` | Previous month | Movimientos, Categorías, Dashboard |
-| `→` | Next month | Movimientos, Categorías, Dashboard |
-
-Shortcuts are suppressed while typing in inputs or when a dialog is open.
-
-## Testing
+## Pruebas
 
 ```bash
-php artisan test --compact                    # full suite
-php artisan test --compact --filter=Movement  # filter by name
+php artisan test --compact                    # suite completa
+php artisan test --compact --filter=Movement  # filtrar por nombre
 ```
 
-Test suite: 242 tests covering models, scopes, CRUD flows, edge cases
-(running balance recalculation after delete, prior-month opening balance,
-category cascade to null), projections, dashboard, settings, and auth.
+La suite cubre **+235 pruebas** organizadas por dominio:
 
-## Useful commands
+| Archivo | Pruebas | Dominio |
+|---|---|---|
+| `ModelTest.php` | 39 | Relaciones, casts, scopes, constraints, valores por defecto |
+| `MovementTest.php` | 35 | CRUD, validación, saldo acumulado, filtrado por mes, reordenamiento, conversión proyectado↔real |
+| `CategoryTest.php` | 32 | CRUD, balance, presupuesto, reembolsos, reordenamiento |
+| `AccountTest.php` | 27 | CRUD, conciliación (exacta, descuadre, exclusión), reordenamiento |
+| `DashboardTest.php` | 23 | Props de Inertia, KPIs, presupuesto, conciliación, proyecciones próximas, gráfico |
+| `RecurringTransactionTest.php` | 19 | CRUD, regeneración idempotente |
+| `GenerateProjectionsTest.php` | 12 | Comando Artisan, horizonte, clamping de día, truncado de mes final |
+| `ProjectionTest.php` | 10 | Vista de proyección, paginación, arrastre de saldo entre páginas |
+| `PreferencesTest.php` | 12 | Temas, densidad, sección de inicio, horizonte, foto de perfil |
+| Auth / Security | 17 | Login, registro, reset de contraseña, actualización de perfil, rate limiting |
+
+Casos de borde cubiertos: recálculo del saldo al eliminar un movimiento
+del medio, apertura de mes desde movimientos de meses anteriores,
+categorías que hacen cascade a null, y arrastre de saldo proyectado
+entre meses consecutivos.
+
+---
+
+## Comandos útiles
 
 ```bash
-php artisan app:generate-projections         # generate projected movements from active templates
-php artisan tinker                           # REPL in app context
-php artisan route:list --except-vendor       # list all routes
-npm run dev                                  # Vite dev server (HMR + SSR)
-npm run build                                # production build
-npm run types:check                          # vue-tsc type checking
-vendor/bin/pint --format agent               # PHP formatting
+php artisan app:generate-projections              # generar movimientos proyectados desde plantillas activas
+php artisan app:generate-projections --horizon=24 # con horizonte personalizado
+php artisan app:generate-projections --user=1     # para un usuario específico
+php artisan tinker                                # REPL en contexto de la app
+php artisan route:list --except-vendor            # listar todas las rutas
+php artisan storage:link                          # enlace simbólico para archivos públicos (avatares)
+npm run dev                                       # Vite dev server (HMR + SSR)
+npm run build                                     # build de producción
+npm run types:check                               # chequeo de tipos con vue-tsc
+vendor/bin/pint --format agent                    # formateo de PHP
 ```
 
-## Project structure
+---
+
+## Estructura del proyecto
 
 ```
 app/
-  Console/Commands/         Artisan commands (generate-projections)
-  Http/Controllers/         Resource controllers + settings
-  Http/Requests/            Form requests (validation)
-  Http/Responses/           Fortify login response (start_section redirect)
-  Models/                   Eloquent models with scopes
+  Console/Commands/         Comandos Artisan (generate-projections)
+  Http/Controllers/         Controladores resource + settings
+  Http/Requests/            Form requests con validación
+  Http/Responses/           Respuesta de login Fortify (redirección start_section)
+  Models/                   Modelos Eloquent con scopes y relaciones
+  Services/                 Servicios de dominio (ProjectionService)
 database/
-  migrations/               Schema migrations
-  factories/                Model factories for testing
+  migrations/               Migraciones de esquema
+  factories/                Factories de modelos para pruebas
 docs/
-  plan-de-trabajo.md        Phase-by-phase implementation plan
-  analisis-sistema-actual.md  How the original spreadsheet works
+  plan-de-trabajo.md        Plan de implementación en 10 fases
+  analisis-sistema-actual.md Análisis de la planilla original
 resources/js/
-  pages/                    Inertia Vue pages (Dashboard, Movimientos, etc.)
-  components/               Reusable Vue + shadcn-vue components
-  composables/              useAppearance, useSettings, useKeyboardShortcuts
-  css/                      Tailwind + theme CSS (8 tweakcn palettes)
+  pages/                    Páginas Inertia + Vue (Dashboard, Movimientos, etc.)
+  components/               Componentes reutilizables (shadcn-vue + propios)
+  composables/              useAppearance, useSettings, useKeyboardShortcuts, useCurrency
+  css/                      Tailwind + temas CSS (8 paletas tweakcn)
 routes/
-  web.php                   App routes
-  settings.php              Settings routes
+  web.php                   Rutas de la aplicación
+  settings.php              Rutas de preferencias
 ```
 
-## Documentation
+---
 
-See `docs/` for the full design and analysis:
+## Documentación
 
-- `docs/plan-de-trabajo.md` — architecture decisions, data model, 10-phase plan
-- `docs/analisis-sistema-actual.md` — how the original spreadsheet works
-- `DEPLOY.md` — notes for future shared-hosting deployment
+La carpeta `docs/` contiene el diseño completo y el análisis:
 
-## License
+- **`docs/plan-de-trabajo.md`** — decisiones de arquitectura, modelo de
+  datos, reglas de negocio, y el plan de 10 fases (completado)
+- **`docs/analisis-sistema-actual.md`** — cómo funciona la planilla
+  original, sus 7 limitaciones, y los 10 requisitos funcionales que
+  motivaron la app
+- **`DEPLOY.md`** — notas para despliegue futuro en hosting compartido
 
-Private project for personal use.
+---
+
+## Licencia
+
+Proyecto privado de uso personal.
