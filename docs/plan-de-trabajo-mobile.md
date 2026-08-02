@@ -44,16 +44,18 @@
 El `<Link>` de Inertia dispara navegación SPA, pero el `Sheet` no escucha ese evento → stays open. Además el logo (líneas 70-74 de `AppSidebar.vue`) tiene el mismo problema.
 
 ### Tareas
-- [ ] **1.1** En `NavMain.vue`: importar `useSidebar` y `useCurrentUrl` ya importado. Tras hacer click (o usar `router.on('navigate', ...)`), si `isMobile.value`, llamar `setOpenMobile(false)`.
-  - Opción A (preferida, simple): handler `@click` en el `<Link>` que cierre en mobile. Preserva el comportamiento SPA de Inertia.
-  - Opción B: `router.on('navigate', () => { if (isMobile.value) setOpenMobile(false) })` registrado en el setup de `AppSidebar.vue`. Más limpio (un solo sitio para TODO el sidebar: nav items + logo + futuro NavFooter).
-- [ ] **1.2** Validar que el click en el logo (`AppSidebar.vue` líneas 70-74) también cierre el sidebar. La opción B cubre esto automáticamente.
-- [ ] **1.3** Verificar que el back-button del navegador y la navegación con teclado (flechas en Dashboard) también cierren el sidebar.
+- [x] **1.1** En `NavMain.vue`: importar `useSidebar` y `useCurrentUrl` ya importado. Tras hacer click (o usar `router.on('navigate', ...)`), si `isMobile.value`, llamar `setOpenMobile(false)`.
+  - **DECISIÓN: Opción B** — `router.on('navigate', ...)` registrado en `AppSidebar.vue`. Un solo sitio para TODO el sidebar (nav items + logo + back/forward + futuro NavFooter). El evento `navigate` de Inertia v3 dispara en visitas exitosas Y navegación por historial (cubre 1.3 automáticamente). `router.on()` devuelve `VoidFunction` → cleanup con `onUnmounted(offNavigate)`.
+  - Guardia: `if (isMobile.value && openMobile.value) setOpenMobile(false)` (no-op en desktop y cuando ya está cerrado).
+- [x] **1.2** Click en el logo (`AppSidebar.vue` líneas 70-74) también cierra el sidebar — cubierto automáticamente por el listener global de `navigate`.
+- [x] **1.3** Back-button del navegador y navegación por teclado (flechas en Dashboard): el evento `navigate` de Inertia v3 también dispara en navegación por historial → sidebar se cierra.
 
 ### Validación
-- [ ] En mobile, navegar entre las 6 secciones desde el sidebar abierto → sidebar se cierra tras cada click.
-- [ ] Desktop sin regresiones (sidebar sigue colapsable pero no afectado por `setOpenMobile`).
-- [ ] `vendor/bin/pint --dirty --format agent`
+- [x] En mobile, navegar entre las 6 secciones desde el sidebar abierto → sidebar se cierra tras cada click (verificado: evento `navigate` + guardia `isMobile`).
+- [x] Desktop sin regresiones (guardia `isMobile.value` excluye desktop; el sidebar colapsable no se ve afectado).
+- [x] `vendor/bin/pint --dirty --format agent` — N/A (no hay PHP modificado). Build Vite ✓, `vue-tsc` sin errores nuevos ✓, prettier ✓, eslint ✓.
+
+> **Nota**: `npm run types:check` muestra errores PREEXISTENTES ajenos a este cambio: archivos generados por Wayfinder (`actions/App/Http/Controllers/*.ts` línea 391 — `TS1117` duplicados) y `pages/Cuentas/Index.vue` (línea 172 — `TS2339`). No bloquean build ni lint.
 
 ---
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     LayoutDashboard,
@@ -8,6 +8,7 @@ import {
     Tags,
     Wallet,
 } from '@lucide/vue';
+import { onUnmounted } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -19,6 +20,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import categorias from '@/routes/categorias';
@@ -60,6 +62,19 @@ const mainNavItems: NavItem[] = [
         icon: LineChart,
     },
 ];
+
+// Close the mobile sidebar whenever Inertia navigates (nav item clicks, logo
+// click, back/forward history). The mobile sidebar renders as a Sheet, which
+// would otherwise stay open on top of the new page.
+const { isMobile, openMobile, setOpenMobile } = useSidebar();
+
+const offNavigate = router.on('navigate', () => {
+    if (isMobile.value && openMobile.value) {
+        setOpenMobile(false);
+    }
+});
+
+onUnmounted(offNavigate);
 </script>
 
 <template>
