@@ -19,21 +19,38 @@ class ProjectionController extends Controller
         $userId = $user->id;
         $today = Carbon::now()->toDateString();
 
-        // Get all future movements (date > today, regardless of is_projected flag)
-        $futureMovements = Movement::where('user_id', $userId)
+        // Whitelisted per-page values; fall back to 25.
+        $perPage = $request->integer('per_page', 25);
+        if (! in_array($perPage, [1, 10, 25, 50, 100], true)) {
+            $perPage = 25;
+        }
+
+        $query = Movement::where('user_id', $userId)
             ->where('date', '>', $today)
             ->orderBy('date')
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->with('category')
-            ->get();
+            ->with('category');
+
+        $paginator = (clone $query)->paginate($perPage)->withQueryString();
 
         $realBalance = (float) Movement::realBalance($userId);
 
-        // Compute running balance starting from realBalance
-        $runningBalance = $realBalance;
-        $items = $futureMovements->map(function (Movement $movement) use (&$runningBalance) {
-            $runningBalance += (float) $movement->amount;
+        // Running balance carried INTO this page: real balance + all future
+        // movements that fall before this page's first item.
+        $carry = $realBalance;
+        $offset = $paginator->firstItem() ? $paginator->firstItem() - 1 : 0;
+
+        if ($offset > 0) {
+            $carry += (clone $query)
+                ->limit($offset)
+                ->pluck('amount')
+                ->map(fn (string $amount) => (float) $amount)
+                ->sum();
+        }
+
+        $items = collect($paginator->items())->map(function (Movement $movement) use (&$carry) {
+            $carry += (float) $movement->amount;
 
             return [
                 'id' => $movement->id,
@@ -45,7 +62,7 @@ class ProjectionController extends Controller
                 'amount' => (float) $movement->amount,
                 'source' => $movement->source,
                 'is_projected' => (bool) $movement->is_projected,
-                'running_balance' => $runningBalance,
+                'running_balance' => $carry,
             ];
         });
 
@@ -53,6 +70,14 @@ class ProjectionController extends Controller
             'items' => $items->values()->all(),
             'openingBalance' => $realBalance,
             'horizonMonths' => $user->settings['projection_horizon'] ?? 12,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
         ]);
     }
 }

@@ -223,3 +223,143 @@ test('projection includes category names', function () {
 
     Carbon::setTestNow();
 });
+
+// ─── Pagination ───────────────────────────────────────────────────
+
+test('projection view paginates future movements', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Past real movements → establish opening balance = 5000
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-15',
+        'amount' => 5000,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    // 12 future movements
+    for ($i = 1; $i <= 12; $i++) {
+        Movement::factory()->create([
+            'user_id' => $user->id,
+            'date' => Carbon::parse('2026-07-16')->addDays($i)->toDateString(),
+            'amount' => 100,
+            'source' => 'manual',
+            'is_projected' => true,
+        ]);
+    }
+
+    $response = $this->get(route('proyeccion.index', ['per_page' => 10]));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('items', 10)
+        ->where('pagination.total', 12)
+        ->where('pagination.per_page', 10)
+        ->where('pagination.last_page', 2)
+        ->where('pagination.current_page', 1)
+        ->where('pagination.from', 1)
+        ->where('pagination.to', 10)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('projection second page carries running balance forward', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Past real movements → establish opening balance = 5000
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-15',
+        'amount' => 5000,
+        'source' => 'manual',
+        'is_projected' => false,
+    ]);
+
+    // Future movement A
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-20',
+        'amount' => -200,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    // Future movement B
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-08-01',
+        'amount' => 1000,
+        'source' => 'manual',
+        'is_projected' => true,
+    ]);
+
+    $response = $this->get(route('proyeccion.index', ['per_page' => 1, 'page' => 2]));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('items', 1)
+        ->where('items.0.amount', 1000)
+        ->where('items.0.running_balance', 5800) // 5000 - 200 + 1000
+        ->where('pagination.current_page', 2)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('projection falls back to default per page for invalid value', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    for ($i = 1; $i <= 3; $i++) {
+        Movement::factory()->create([
+            'user_id' => $user->id,
+            'date' => Carbon::parse('2026-07-16')->addDays($i)->toDateString(),
+            'amount' => 100,
+            'source' => 'manual',
+            'is_projected' => true,
+        ]);
+    }
+
+    $response = $this->get(route('proyeccion.index', ['per_page' => 999]));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('pagination.per_page', 25)
+        ->has('items', 3)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('projection pagination metadata present on empty state', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    // Only past movements
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-06-15',
+        'amount' => 5000,
+        'source' => 'manual',
+    ]);
+
+    $response = $this->get(route('proyeccion.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('items', [])
+        ->where('pagination.total', 0)
+        ->where('pagination.last_page', 1)
+        ->where('pagination.per_page', 25)
+    );
+
+    Carbon::setTestNow();
+});

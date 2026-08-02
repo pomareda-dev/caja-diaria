@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2, CheckCircle2, AlertTriangle, GripVertical } from '@lucide/vue';
+import { Plus, Pencil, Trash2, CheckCircle2, AlertTriangle } from '@lucide/vue';
 import { ref, computed } from 'vue';
-import draggable from 'vuedraggable';
 import AccountDialog from '@/components/accounts/AccountDialog.vue';
 import type { AccountData } from '@/components/accounts/AccountDialog.vue';
+import ResponsiveTable from '@/components/ResponsiveTable.vue';
+import type { ResponsiveColumn } from '@/components/ResponsiveTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,14 +23,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    Table,
-    TableCell,
-    TableFooter,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { TableCell, TableFooter, TableRow } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import { useSettings } from '@/composables/useSettings';
 import cuentas from '@/routes/cuentas';
@@ -75,6 +69,34 @@ const kindBadgeVariant: Record<string, string> = {
     other: 'secondary',
 };
 
+function asAccount(row: Record<string, unknown>): AccountData {
+    return row as unknown as AccountData;
+}
+
+// --- Table columns ---
+const tableColumns: ResponsiveColumn[] = [
+    { key: '__drag', header: '', dragHandle: true },
+    { key: 'kind', header: 'Tipo' },
+    {
+        key: 'name',
+        header: 'Cuenta',
+        primary: true,
+        className: 'font-medium',
+    },
+    {
+        key: 'balance',
+        header: 'Saldo',
+        align: 'right',
+        className: 'font-medium tabular-nums',
+    },
+    {
+        key: 'status',
+        header: 'Estado',
+        align: 'center',
+        hideOnMobile: true,
+    },
+];
+
 // --- Dialog state ---
 const showCreateDialog = ref(false);
 const editingAccount = ref<AccountData | null>(null);
@@ -86,21 +108,23 @@ function openCreate() {
     showCreateDialog.value = true;
 }
 
-function onReorder() {
-    const ids = props.accounts.map((a) => a.id);
-
+function onReorder(ids: number[]) {
     if (ids.length <= 1) {
         return;
     }
 
-    router.patch(cuentas.reorder.url(), {
-        ids,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            /* flash success handled by server */
+    router.patch(
+        cuentas.reorder.url(),
+        {
+            ids,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                /* flash success handled by server */
+            },
+        },
+    );
 }
 
 function openEdit(account: AccountData) {
@@ -160,126 +184,107 @@ const totalBalance = computed(() => {
         </div>
 
         <!-- Accounts Table -->
-        <div class="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
-                        <TableHead :class="densityClass.header">Tipo</TableHead>
-                        <TableHead :class="densityClass.header">Cuenta</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Saldo</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-center']">Estado</TableHead>
-                        <TableHead :class="[densityClass.block, 'w-[100px]']"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <draggable
-                    :list="accounts"
-                    item-key="id"
-                    tag="tbody"
-                    :handle="'.drag-handle'"
-                    :animation="150"
-                    @end="onReorder"
+        <ResponsiveTable
+            :columns="tableColumns"
+            :rows="accounts as unknown as Record<string, unknown>[]"
+            row-key="id"
+            draggable
+            @reorder="onReorder"
+        >
+            <template #cell-kind="{ row }">
+                <Badge :variant="kindBadgeVariant[asAccount(row).kind] as any">
+                    {{ kindLabels[asAccount(row).kind] }}
+                </Badge>
+            </template>
+
+            <template #cell-name="{ row }">
+                <div class="flex items-center gap-2">
+                    {{ asAccount(row).name }}
+                    <Badge
+                        v-if="asAccount(row).exclude_from_reconciliation"
+                        variant="outline"
+                        class="text-muted-foreground"
+                    >
+                        Excluida
+                    </Badge>
+                </div>
+            </template>
+
+            <template #cell-balance="{ row }">
+                {{ format(asAccount(row).balance) }}
+            </template>
+
+            <template #cell-status="{ row }">
+                <span
+                    v-if="asAccount(row).exclude_from_reconciliation"
+                    class="text-xs text-muted-foreground"
                 >
-                    <template #item="{ element: account }">
-                        <TableRow class="group">
-                            <TableCell class="p-0 pl-2">
-                                <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                            </TableCell>
-                            <TableCell :class="densityClass.cell">
-                                <Badge :variant="kindBadgeVariant[account.kind] as any">
-                                    {{ kindLabels[account.kind] }}
-                                </Badge>
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'font-medium']">
-                                <div class="flex items-center gap-2">
-                                    {{ account.name }}
-                                    <Badge
-                                        v-if="account.exclude_from_reconciliation"
-                                        variant="outline"
-                                        class="text-muted-foreground"
-                                    >
-                                        Excluida
-                                    </Badge>
-                                </div>
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums']">
-                                {{ format(account.balance) }}
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'text-center']">
-                                <span
-                                    v-if="account.exclude_from_reconciliation"
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    —
-                                </span>
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400"
-                                >
-                                    <CheckCircle2 class="size-3.5" />
-                                    Incluida
-                                </span>
-                            </TableCell>
-                            <TableCell :class="densityClass.cell">
-                                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="size-8"
-                                        @click="openEdit(account)"
-                                        aria-label="Ajustar saldo"
-                                    >
-                                        <Pencil class="size-3.5" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                        @click="confirmDelete(account)"
-                                        aria-label="Eliminar cuenta"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                    </Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    </template>
+                    —
+                </span>
+                <span
+                    v-else
+                    class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400"
+                >
+                    <CheckCircle2 class="size-3.5" />
+                    Incluida
+                </span>
+            </template>
 
-                    <template #footer>
-                        <!-- Empty state -->
-                        <TableRow v-if="accounts.length === 0">
-                            <TableCell
-                                colspan="6"
-                                class="text-center py-12 text-muted-foreground"
-                            >
-                                No hay cuentas registradas.
-                                <br>
-                                <Button
-                                    variant="link"
-                                    class="mt-1"
-                                    @click="openCreate"
-                                >
-                                    Crear la primera cuenta
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    </template>
-                </draggable>
+            <template #actions="{ row }">
+                <div class="flex items-center justify-end gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="size-8"
+                        @click="openEdit(asAccount(row))"
+                        aria-label="Ajustar saldo"
+                    >
+                        <Pencil class="size-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                        @click="confirmDelete(asAccount(row))"
+                        aria-label="Eliminar cuenta"
+                    >
+                        <Trash2 class="size-3.5" />
+                    </Button>
+                </div>
+            </template>
 
-                <!-- Footer with totals -->
+            <template #empty>
+                <div class="flex flex-col items-center gap-1">
+                    No hay cuentas registradas.
+                    <Button variant="link" class="mt-1" @click="openCreate">
+                        Crear la primera cuenta
+                    </Button>
+                </div>
+            </template>
+
+            <!-- Footer with totals -->
+            <template #footer>
                 <TableFooter v-if="accounts.length > 0">
                     <TableRow>
-                        <TableCell :class="[densityClass.cell, 'font-semibold']" colspan="3">
+                        <TableCell
+                            :class="[densityClass.cell, 'font-semibold']"
+                            colspan="3"
+                        >
                             Total
                         </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-right font-bold tabular-nums']">
+                        <TableCell
+                            :class="[
+                                densityClass.cell,
+                                'text-right font-bold tabular-nums',
+                            ]"
+                        >
                             {{ format(totalBalance) }}
                         </TableCell>
                         <TableCell :class="densityClass.cell" colspan="2" />
                     </TableRow>
                 </TableFooter>
-            </Table>
-        </div>
+            </template>
+        </ResponsiveTable>
 
         <!-- Reconciliation Panel -->
         <Card>

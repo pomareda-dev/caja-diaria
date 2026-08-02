@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical } from '@lucide/vue';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from '@lucide/vue';
 import { ref, computed } from 'vue';
-import draggable from 'vuedraggable';
 import CategoryDialog from '@/components/categories/CategoryDialog.vue';
 import type { CategoryData } from '@/components/categories/CategoryDialog.vue';
+import ResponsiveTable from '@/components/ResponsiveTable.vue';
+import type { ResponsiveColumn } from '@/components/ResponsiveTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,16 +16,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    Table,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
-import { useSettings } from '@/composables/useSettings';
 import categorias from '@/routes/categorias';
 
 const props = defineProps<{
@@ -45,7 +38,6 @@ defineOptions({
 });
 
 const { format, formatSigned } = useCurrency();
-const { densityClass } = useSettings();
 
 function formatSign(value: number): string {
     if (value === 0) {
@@ -54,6 +46,36 @@ function formatSign(value: number): string {
 
     return formatSigned(value);
 }
+
+function asCategory(row: Record<string, unknown>): CategoryData {
+    return row as unknown as CategoryData;
+}
+
+// --- Table columns ---
+const tableColumns: ResponsiveColumn[] = [
+    { key: '__drag', header: '', dragHandle: true },
+    { key: 'kind', header: 'Tipo' },
+    {
+        key: 'name',
+        header: 'Nombre',
+        primary: true,
+        className: 'font-medium',
+    },
+    {
+        key: 'balance',
+        header: 'Balance',
+        align: 'right',
+        className: 'font-medium tabular-nums',
+    },
+    {
+        key: 'monthly_limit',
+        header: 'Límite',
+        align: 'right',
+        hideOnMobile: true,
+        className: 'tabular-nums text-muted-foreground',
+    },
+    { key: 'progress', header: 'Progreso', hideOnMobile: true },
+];
 
 // --- Month navigation ---
 const selectedDate = computed(() => {
@@ -69,7 +91,9 @@ const monthLabel = computed(() => {
     });
 });
 
-const isCurrentMonth = computed(() => props.selectedMonth === props.currentMonth);
+const isCurrentMonth = computed(
+    () => props.selectedMonth === props.currentMonth,
+);
 
 function navigateMonth(delta: number) {
     const date = new Date(selectedDate.value);
@@ -102,20 +126,20 @@ const kindBadgeVariant: Record<string, string> = {
 
 function progressPercentage(cat: CategoryData): number {
     if (!cat.monthly_limit || cat.monthly_limit <= 0) {
-return 0;
-}
+        return 0;
+    }
 
     return (cat.spent / cat.monthly_limit) * 100;
 }
 
 function progressColor(pct: number): string {
     if (pct > 100) {
-return 'bg-red-500';
-}
+        return 'bg-red-500';
+    }
 
     if (pct >= 75) {
-return 'bg-amber-500';
-}
+        return 'bg-amber-500';
+    }
 
     return 'bg-green-500';
 }
@@ -131,30 +155,35 @@ function openCreate() {
     showCreateDialog.value = true;
 }
 
-function onReorder() {
-    const ids = props.categories.map((c) => c.id);
-
+function onReorder(ids: number[]) {
     if (ids.length <= 1) {
         return;
     }
 
-    router.patch(categorias.reorder.url(), {
-        ids,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            /* flash success handled by server */
+    router.patch(
+        categorias.reorder.url(),
+        {
+            ids,
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                /* flash success handled by server */
+            },
+        },
+    );
 }
 
 // --- Keyboard shortcuts ---
-useKeyboardShortcuts([
-    { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
-    { key: 'ArrowRight', handler: () => navigateMonth(1) },
-], {
-    isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
-});
+useKeyboardShortcuts(
+    [
+        { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
+        { key: 'ArrowRight', handler: () => navigateMonth(1) },
+    ],
+    {
+        isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
+    },
+);
 
 function openEdit(category: CategoryData) {
     editingCategory.value = category;
@@ -168,8 +197,8 @@ function confirmDelete(category: CategoryData) {
 
 function executeDelete() {
     if (!deleteTarget.value) {
-return;
-}
+        return;
+    }
 
     router.delete(categorias.destroy.url(deleteTarget.value.id), {
         preserveScroll: true,
@@ -191,14 +220,16 @@ return;
     <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
         <!-- Header -->
         <div class="mb-2">
-            <h1 class="text-2xl font-bold tracking-tight">Categorías y presupuestos</h1>
-            <p class="text-muted-foreground text-sm">
+            <h1 class="text-2xl font-bold tracking-tight">
+                Categorías y presupuestos
+            </h1>
+            <p class="text-sm text-muted-foreground">
                 Gestiona tus categorías y controla tu presupuesto mensual
             </p>
         </div>
 
         <!-- Month Navigation + Create Button -->
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-2">
                 <Button
                     variant="outline"
@@ -210,7 +241,9 @@ return;
                     <ChevronLeft class="size-4" />
                 </Button>
 
-                <span class="min-w-[160px] text-center text-lg font-semibold capitalize">
+                <span
+                    class="min-w-[160px] text-center text-lg font-semibold capitalize"
+                >
                     {{ monthLabel }}
                 </span>
 
@@ -235,133 +268,137 @@ return;
             </div>
 
             <Button @click="openCreate">
-                <Plus class="size-4 mr-1" />
+                <Plus class="mr-1 size-4" />
                 Nueva categoría
             </Button>
         </div>
 
         <!-- Table -->
-        <div class="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
-                        <TableHead :class="densityClass.header">Tipo</TableHead>
-                        <TableHead :class="densityClass.header">Nombre</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Balance</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Límite</TableHead>
-                        <TableHead :class="[densityClass.header, 'min-w-[180px]']">Progreso</TableHead>
-                        <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
-                    </TableRow>
-                </TableHeader>
-                <draggable
-                    :list="categories"
-                    item-key="id"
-                    tag="tbody"
-                    :handle="'.drag-handle'"
-                    :animation="150"
-                    @end="onReorder"
-                >
-                    <template #item="{ element: cat }">
-                        <TableRow class="group">
-                            <TableCell class="p-0 pl-2">
-                                <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                            </TableCell>
-                            <TableCell :class="densityClass.cell">
-                                <Badge :variant="kindBadgeVariant[cat.kind] as any">
-                                    {{ kindLabels[cat.kind] }}
-                                </Badge>
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'font-medium']">
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        v-if="cat.color"
-                                        class="inline-block size-3 rounded-full shrink-0"
-                                        :style="{ backgroundColor: cat.color }"
-                                    />
-                                    {{ cat.name }}
-                                </div>
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums', cat.balance > 0 ? 'text-green-600 dark:text-green-400' : cat.balance < 0 ? 'text-red-600 dark:text-red-400' : '']">
-                                {{ formatSign(cat.balance) }}
-                            </TableCell>
-                            <TableCell :class="[densityClass.cell, 'text-right tabular-nums text-muted-foreground']">
-                                {{ cat.monthly_limit !== null ? format(cat.monthly_limit) : '—' }}
-                            </TableCell>
-                            <TableCell :class="densityClass.cell">
-                                <div v-if="cat.monthly_limit !== null && cat.monthly_limit > 0" class="flex items-center gap-3">
-                                    <div class="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                                        <div
-                                            class="h-full rounded-full transition-all duration-300"
-                                            :class="progressColor(progressPercentage(cat))"
-                                            :style="{ width: Math.min(progressPercentage(cat), 100) + '%' }"
-                                        />
-                                    </div>
-                                    <span
-                                        class="text-xs font-medium tabular-nums shrink-0"
-                                        :class="{
-                                            'text-red-600 dark:text-red-400': progressPercentage(cat) > 100,
-                                            'text-amber-600 dark:text-amber-400': progressPercentage(cat) >= 75 && progressPercentage(cat) <= 100,
-                                            'text-green-600 dark:text-green-400': progressPercentage(cat) < 75,
-                                        }"
-                                    >
-                                        {{ Math.round(progressPercentage(cat)) }}%
-                                    </span>
-                                </div>
-                                <span
-                                    v-else
-                                    class="text-xs text-muted-foreground"
-                                >
-                                    Sin límite
-                                </span>
-                            </TableCell>
-                            <TableCell :class="densityClass.cell">
-                                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="size-8"
-                                        @click="openEdit(cat)"
-                                        aria-label="Editar categoría"
-                                    >
-                                        <Pencil class="size-3.5" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="size-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                        @click="confirmDelete(cat)"
-                                        aria-label="Eliminar categoría"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                    </Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    </template>
+        <ResponsiveTable
+            :columns="tableColumns"
+            :rows="categories as unknown as Record<string, unknown>[]"
+            row-key="id"
+            draggable
+            @reorder="onReorder"
+        >
+            <template #cell-kind="{ row }">
+                <Badge :variant="kindBadgeVariant[asCategory(row).kind] as any">
+                    {{ kindLabels[asCategory(row).kind] }}
+                </Badge>
+            </template>
 
-                    <template #footer>
-                        <!-- Empty state -->
-                        <TableRow v-if="categories.length === 0">
-                            <TableCell
-                                colspan="7"
-                                class="text-center py-12 text-muted-foreground"
-                            >
-                                No hay categorías.
-                                <br>
-                                <Button
-                                    variant="link"
-                                    class="mt-1"
-                                    @click="openCreate"
-                                >
-                                    Crear la primera categoría
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    </template>
-                </draggable>
-            </Table>
-        </div>
+            <template #cell-name="{ row }">
+                <div class="flex items-center gap-2">
+                    <span
+                        v-if="asCategory(row).color"
+                        class="inline-block size-3 shrink-0 rounded-full"
+                        :style="{
+                            backgroundColor: asCategory(row).color ?? undefined,
+                        }"
+                    />
+                    {{ asCategory(row).name }}
+                </div>
+            </template>
+
+            <template #cell-balance="{ row }">
+                <span
+                    class="font-medium tabular-nums"
+                    :class="
+                        asCategory(row).balance > 0
+                            ? 'text-green-600 dark:text-green-400'
+                            : asCategory(row).balance < 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : ''
+                    "
+                >
+                    {{ formatSign(asCategory(row).balance) }}
+                </span>
+            </template>
+
+            <template #cell-monthly_limit="{ row }">
+                {{
+                    asCategory(row).monthly_limit !== null
+                        ? format(asCategory(row).monthly_limit ?? 0)
+                        : '—'
+                }}
+            </template>
+
+            <template #cell-progress="{ row }">
+                <div
+                    v-if="(asCategory(row).monthly_limit ?? 0) > 0"
+                    class="flex items-center gap-3"
+                >
+                    <div
+                        class="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+                    >
+                        <div
+                            class="h-full rounded-full transition-all duration-300"
+                            :class="
+                                progressColor(
+                                    progressPercentage(asCategory(row)),
+                                )
+                            "
+                            :style="{
+                                width:
+                                    Math.min(
+                                        progressPercentage(asCategory(row)),
+                                        100,
+                                    ) + '%',
+                            }"
+                        />
+                    </div>
+                    <span
+                        class="shrink-0 text-xs font-medium tabular-nums"
+                        :class="{
+                            'text-red-600 dark:text-red-400':
+                                progressPercentage(asCategory(row)) > 100,
+                            'text-amber-600 dark:text-amber-400':
+                                progressPercentage(asCategory(row)) >= 75 &&
+                                progressPercentage(asCategory(row)) <= 100,
+                            'text-green-600 dark:text-green-400':
+                                progressPercentage(asCategory(row)) < 75,
+                        }"
+                    >
+                        {{ Math.round(progressPercentage(asCategory(row))) }}%
+                    </span>
+                </div>
+                <span v-else class="text-xs text-muted-foreground">
+                    Sin límite
+                </span>
+            </template>
+
+            <template #actions="{ row }">
+                <div class="flex items-center justify-end gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="size-8"
+                        @click="openEdit(asCategory(row))"
+                        aria-label="Editar categoría"
+                    >
+                        <Pencil class="size-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                        @click="confirmDelete(asCategory(row))"
+                        aria-label="Eliminar categoría"
+                    >
+                        <Trash2 class="size-3.5" />
+                    </Button>
+                </div>
+            </template>
+
+            <template #empty>
+                <div class="flex flex-col items-center gap-1">
+                    No hay categorías.
+                    <Button variant="link" class="mt-1" @click="openCreate">
+                        Crear la primera categoría
+                    </Button>
+                </div>
+            </template>
+        </ResponsiveTable>
     </div>
 
     <!-- Create / Edit Dialog -->
@@ -378,23 +415,17 @@ return;
                 <DialogTitle>Eliminar categoría</DialogTitle>
                 <DialogDescription>
                     ¿Estás seguro de eliminar esta categoría?
-                    <br>
+                    <br />
                     <strong>{{ deleteTarget?.name }}</strong>
-                    <br>
+                    <br />
                     Esta acción no se puede deshacer.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-                <Button
-                    variant="outline"
-                    @click="showDeleteDialog = false"
-                >
+                <Button variant="outline" @click="showDeleteDialog = false">
                     Cancelar
                 </Button>
-                <Button
-                    variant="destructive"
-                    @click="executeDelete"
-                >
+                <Button variant="destructive" @click="executeDelete">
                     Eliminar
                 </Button>
             </DialogFooter>

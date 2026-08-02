@@ -107,57 +107,82 @@ Implementación sin duplicar lógica: un wrapper `ResponsiveTable` (o patrón de
 **Decisión: Opción A — componente `ResponsiveTable` reutilizable.**
 
 - [x] ~Elegir: **(A) componente `ResponsiveTable` reutilizable** vs **(B) bloque duplicado por página**~
-- [ ] Crear `resources/js/components/ui/responsive-table/ResponsiveTable.vue` (y subcomponentes si aplica: `ResponsiveTableColumn`, etc.).
-- [ ] Definir la API de columnas:
+- [x] Crear `resources/js/components/ResponsiveTable.vue` (NO en `ui/` — es app-specific: usa `useSettings` y `vuedraggable`).
+- [x] Definir la API de columnas:
   ```ts
   interface ResponsiveColumn {
-    key: string;
-    header: string;
+    key: string;            // 'amount' | '__drag' | ...
+    header: string;         // '' para columna de acciones/drag
     align?: 'left' | 'right' | 'center';
-    hideOnMobile?: boolean;
-    primary?: boolean;   // campo destacado en la card mobile
+    hideOnMobile?: boolean; // oculta campo en card mobile
+    primary?: boolean;      // campo destacado (título de la card mobile)
+    dragHandle?: boolean;   // renderiza GripVertical (solo desktop)
+    className?: string;     // clases extra en la celda
+    headerClassName?: string; // clases extra en el header
   }
   ```
-- [ ] Definir slots: `cell-{key}` para personalizar celda desktop y `card-{key}` para personalizar campo mobile (fallback: usar `cell-{key}` si `card-{key}` no existe).
-- [ ] Slot `actions` por fila (iconos edit/delete), posicionado top-right en mobile y columna final en desktop.
-- [ ] Documentar la convención: memoria Engram (`mem_save` type: `architecture`, `topic_key: architecture/responsive-table`) + comentario de usage en el componente.
-- [ ] Registrar el patrón en el skill registry del proyecto si aplica.
+- [x] Slots implementados: `cell-{key}` (desktop + fallback mobile), `card-{key}` (override mobile), `actions` (última td desktop / top-right mobile), `empty` (ambas vistas), `footer` (dentro del `<table>` tras el tbody — para totales). Props de slot: `{ row, column, index }`.
+- [x] `draggable` prop: usa vuedraggable `tag="tbody"` solo en desktop; emite `reorder: [ids]` con el orden visual al soltar. Las columnas `dragHandle` quedan implícitamente ocultas en mobile.
+- [x] Documentar la convención: memoria Engram guardada (bugfix/architecture en `ui/mobile-responsive`).
+- [ ] Registrar el patrón en el skill registry del proyecto si aplica. **Pendiente** (no hay skill registry activo en este proyecto).
 
-#### 3.1 `pages/Movimientos/Index.vue` (más filas / filtros — pilot del componente `ResponsiveTable`)
-- [ ] Inventario de columnas: fecha, descripción, categoría, cuenta, monto, acciones.
-- [ ] Diseñar card mobile: monto como título destacado, descripción como subtítulo, meta (fecha/categoría/cuenta) en grid 2×2, acciones como iconos top-right.
-- [ ] Implementar según decisión 3.0.
-- [ ] Validar paginación/filtros en mobile.
+**Decisiones tomadas durante implementación:**
+- **Acciones siempre visibles** (se eliminó `opacity-0 group-hover:opacity-100`): el `tr` del componente no tiene clase `group`, y en mobile no hay hover — siempre visibles es mejor para accesibilidad y mobile.
+- **Proyectados (Movimientos) no es draggable**: la columna `__drag` se elimina de su config (grip sin drag es UX engañosa).
+- **Columna `__drag` fuera**: `projectedColumns` filtra `__drag`; balance renombrado a `projected_balance` para slot propio.
+- **Bug preexistente corregido**: Cuentas usaba `densityClass.block` (undefined) en el header de acciones → el TS2339 desapareció con la migración.
 
-#### 3.2 `pages/Categorias/Index.vue`
-- [ ] Columnas: nombre (con color), tipo, presupuesto, gastado, % uso, acciones.
-- [ ] Card mobile: nombre + badge de color, barra de progreso full-width, números en fila inferior, acciones.
-- [ ] Implementar + validar.
+#### 3.1 `pages/Movimientos/Index.vue` (pilot del componente `ResponsiveTable`) — COMPLETADO
+- [x] Dos tablas (Actuales draggable con sticky headers + max-h, Proyectados estática), ambas con ResponsiveTable.
+- [x] Columnas: drag, fecha, descripción (primary, con Badge "Proyectado" en Proyectados), tipo (color dot + nombre), cantidad (signado), balance/proyección (hideOnMobile).
+- [x] Footer "Saldo inicial" en slot `footer` (tbody bg-muted/30). Empty states en slot `empty`.
+- [x] Reorder: `realList` (copia reversed), el componente emite orden visual (newest-first) → se revierte antes de enviar (payload idéntico al original).
+- [x] Resuelto el conflicto de slots: Proyectados usa key `projected_balance` + slot `cell-projected_balance` (usa `projectedBalances[index]`).
 
-#### 3.3 `pages/Cuentas/Index.vue`
-- [ ] Notas especiales: hay reordenamiento por drag (`vuedraggable`). Drag no es mobile-friendly → plantear reorden con botones ▲▼ o mantener solo en desktop y en mobile mostrar orden fijo con nota.
-- [ ] Columnas: nombre, tipo (badge), balance, estado conciliación, acciones.
-- [ ] Card mobile: balance grande, nombre + badge tipo, indicador de conciliación (icono), acciones+reorden.
-- [ ] Implementar + validar el flujo de reorden (puede ser sub-fase separada).
+#### 3.2 `pages/Categorias/Index.vue` — COMPLETADO
+- [x] Draggable. Columnas: drag, tipo (badge), nombre (primary + color dot), balance (signado 3 estados), límite (hideOnMobile), progreso (hideOnMobile, barra + % exacta).
+- [x] Empty con botón "Crear la primera categoría". Reorder payload idéntico al original.
 
-#### 3.4 `pages/Recurrentes/Index.vue`
-- [ ] Columnas: descripción, categoría, monto, tipo, próximo mes, acciones.
-- [ ] Card mobile: monto + tipo (badge), descripción, próxima fecha, acciones.
-- [ ] Implementar + validar el botón "Regenerar proyecciones" en mobile.
+#### 3.3 `pages/Cuentas/Index.vue` — COMPLETADO
+- [x] Draggable. Columnas: drag, tipo (badge), cuenta (primary + Badge "Excluida"), saldo, estado (hideOnMobile, CheckCircle2 "Incluida"/—).
+- [x] Footer con `TableFooter` (Total + suma) en slot `footer` solo si hay cuentas. Empty con botón "Crear la primera cuenta".
+- [x] Reorder payload idéntico. **Nota drag mobile**: drag es desktop-only (componente no renderiza drag en mobile); en mobile el orden queda fijo. Se puede plantear reorden con botones ▲▼ en una fase futura si el usuario lo pide.
 
-#### 3.5 `pages/Proyeccion/Index.vue`
-- [ ] Es la más densa en columnas (revisar el contenido específico).
-- [ ] Card mobile diseñada para escanear cronológicamente: fecha como header de card, descripción, monto + badge proyectado/real, categoría.
-- [ ] Implementar + validar navegación de mes y agrupación.
+#### 3.4 `pages/Recurrentes/Index.vue` — COMPLETADO
+- [x] No draggable. Columnas: nombre (primary), importe (signado), categoría, día (hideOnMobile), inicio/fin (hideOnMobile), estado (badge Activo/Inactivo).
+- [x] Empty con botón "Crear la primera plantilla". Botón "Regenerar proyecciones" intacto.
+
+#### 3.5 `pages/Proyeccion/Index.vue` — COMPLETADO
+- [x] No draggable, sin acciones (read-only). Columnas: fecha (full), movimiento (primary + Badge "Recurrente"), categoría (color dot), origen (hideOnMobile), cantidad (signado), proyección (hideOnMobile).
+- [x] Card "Balance inicial" intacta. Empty con hint.
 
 ### Validación global Fase 3
-- [ ] Cada página: probar 375px, 768px, 1024px.
-- [ ] Sin scroll horizontal en mobile.
-- [ ] Acciones CRUD abren Diálogos correctamente desde card mobile.
-- [ ] `vendor/bin/pint --dirty --format agent`.
-- [ ] Smoke test manual completo de crear/editar/eliminar en mobile en cada sección.
+- [x] Build Vite ✓ (componente + 5 páginas).
+- [x] `vue-tsc`: sin errores nuevos (TS1117 Wayfinder preexistentes; TS2339 de Cuentas ELIMINADO por la migración).
+- [x] ESLint: sin errores nuevos (2 preexistentes `props` unused en Proyeccion/Recurrentes — verificados en HEAD).
+- [x] Prettier: regiones nuevas conformes; drift preexistente intacto en las 5 páginas.
+- [x] Reorder handlers verificados: payload idéntico al original en las 3 páginas draggable.
+- [ ] Smoke test manual en mobile (375px): navegar por las 5 secciones, CRUD desde cards, reordenar en desktop — PENDIENTE.
+- [ ] `vendor/bin/pint --dirty --format agent` — N/A (sin PHP modificado).
 
 ---
+
+## Fase 4 — Paginación servidor-side en Proyección (solicitud adicional)
+
+**Solicitud del usuario**: la tabla de Proyección tendrá mucha data → paginación del lado del servidor, con filtro de filas por página (estilo data-table), funcional también en mobile.
+
+### Estado: COMPLETADO
+
+- [x] **Backend** (`app/Http/Controllers/ProjectionController.php`): `paginate($perPage)` con `withQueryString()`. Whitelist `[1, 10, 25, 50, 100]` con fallback 25. **Clave**: `running_balance` acumulativo — carry por página = `realBalance` + suma de movimientos futuros anteriores al offset (`(clone $query)->limit($offset)->pluck('amount')->map(fn)->sum()`), luego se acumula dentro de la página. Prop `items` sigue siendo array plano (página actual) + nueva prop `pagination` (`current_page`, `last_page`, `per_page`, `total`, `from`, `to`).
+- [x] **Frontend** (`resources/js/components/PaginationControls.vue` — nuevo componente reutilizable): selector "Filas por página" (10/25/50/100, Select), texto "Mostrando X–Y de Z", botones Anterior/Siguiente + "Página X de Y". Oculto el bloque prev/next cuando `last_page <= 1`; el selector siempre visible. Responsive: `flex-col sm:flex-row`.
+- [x] **Frontend** (`resources/js/pages/Proyeccion/Index.vue`): handlers `changePage`/`changePerPage` con `router.get(proyeccion.index.url(), { page, per_page }, { preserveState: true, preserveScroll: true })`. Cambiar per_page omite `page` → resetea a página 1 naturalmente. `<PaginationControls>` renderizado debajo del `ResponsiveTable` (funciona igual en mobile por las cards).
+- [x] **Tests** (4 nuevos en `ProjectionTest.php`): paginación real (12 movs, per_page=10 → items 10, total 12, last_page 2), carry en página 2 (per_page=1&page=2 → running_balance 5800 = 5000−200+1000), fallback per_page inválido (999→25), metadata en estado vacío.
+- [x] **Verificación**: 10/10 tests de proyección (134 assertions) ✓; suite completa 246 passed (2 fallos preexistentes de Settings/contraseña verificados con `git stash` — ajenos) ✓; build ✓; vue-tsc sin errores nuevos ✓; pint ✓.
+
+### Decisiones
+- Whitelist incluye `1` (solo server-side, no en UI) para permitir el test de carry en página 2 — no expande riesgo (limita, no amplía).
+- SelectItem usa valores numéricos directos (reka-ui `AcceptableValue` incluye number); `onPerPageChange` convierte con `Number(value)`.
+- `preserveScroll: true` para que el usuario no salte al top al paginar.
 
 ## Orden de ejecución recomendado
 

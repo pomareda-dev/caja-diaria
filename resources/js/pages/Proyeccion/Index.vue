@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import PaginationControls from '@/components/PaginationControls.vue';
+import type { PaginationMeta } from '@/components/PaginationControls.vue';
+import ResponsiveTable from '@/components/ResponsiveTable.vue';
+import type { ResponsiveColumn } from '@/components/ResponsiveTable.vue';
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -8,16 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
-import { useSettings } from '@/composables/useSettings';
 import proyeccion from '@/routes/proyeccion';
 
 export interface ProjectionItem {
@@ -37,6 +32,7 @@ const props = defineProps<{
     items: ProjectionItem[];
     openingBalance: number;
     horizonMonths: number;
+    pagination: PaginationMeta;
 }>();
 
 defineOptions({
@@ -51,7 +47,69 @@ defineOptions({
 });
 
 const { format, formatSigned } = useCurrency();
-const { densityClass } = useSettings();
+
+function changePage(page: number) {
+    router.get(
+        proyeccion.index.url(),
+        {
+            page,
+            per_page: props.pagination.per_page,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                // nothing
+            },
+        },
+    );
+}
+
+function changePerPage(perPage: number) {
+    router.get(
+        proyeccion.index.url(),
+        {
+            per_page: perPage,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
+}
+
+function asProjectionItem(row: Record<string, unknown>): ProjectionItem {
+    return row as unknown as ProjectionItem;
+}
+
+// --- Table columns ---
+const tableColumns: ResponsiveColumn[] = [
+    {
+        key: 'date',
+        header: 'Fecha',
+        className: 'font-medium whitespace-nowrap',
+    },
+    { key: 'description', header: 'Movimiento', primary: true },
+    {
+        key: 'category',
+        header: 'Categoría',
+        className: 'text-muted-foreground',
+    },
+    { key: 'source', header: 'Origen', hideOnMobile: true },
+    {
+        key: 'amount',
+        header: 'Cantidad',
+        align: 'right',
+        className: 'font-medium tabular-nums',
+    },
+    {
+        key: 'running_balance',
+        header: 'Proyección',
+        align: 'right',
+        hideOnMobile: true,
+        className: 'font-medium tabular-nums',
+    },
+];
 
 function sourceLabel(source: string): string {
     const labels: Record<string, string> = {
@@ -110,79 +168,80 @@ function formatSign(value: number): string {
         </Card>
 
         <!-- Future Movements Table -->
-        <div class="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead :class="densityClass.header">Fecha</TableHead>
-                        <TableHead :class="densityClass.header">Movimiento</TableHead>
-                        <TableHead :class="densityClass.header">Categoría</TableHead>
-                        <TableHead :class="densityClass.header">Origen</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Cantidad</TableHead>
-                        <TableHead :class="[densityClass.header, 'text-right']">Proyección</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <TableRow
-                        v-for="item in items"
-                        :key="item.id"
-                    >
-                        <TableCell :class="[densityClass.cell, 'font-medium whitespace-nowrap']">
-                            {{ formatDate(item.date) }}
-                        </TableCell>
-                        <TableCell :class="densityClass.cell">
-                            <div class="flex items-center gap-2">
-                                <span>{{ item.description }}</span>
-                                <Badge
-                                    v-if="item.source === 'recurring'"
-                                    variant="outline"
-                                    class="text-amber-600 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950 text-[10px] px-1.5 py-0"
-                                >
-                                    Recurrente
-                                </Badge>
-                            </div>
-                        </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-muted-foreground']">
-                            <div class="flex items-center gap-2">
-                                <span
-                                    v-if="item.category_color"
-                                    class="inline-block size-3 rounded-full shrink-0"
-                                    :style="{ backgroundColor: item.category_color }"
-                                />
-                                {{ item.category_name ?? 'Sin categoría' }}
-                            </div>
-                        </TableCell>
-                        <TableCell :class="densityClass.cell">
-                            <span class="text-xs text-muted-foreground">
-                                {{ sourceLabel(item.source) }}
-                            </span>
-                        </TableCell>
-                        <TableCell
-                            :class="[densityClass.cell, 'text-right font-medium tabular-nums', item.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400']"
-                        >
-                            {{ formatSign(item.amount) }}
-                        </TableCell>
-                        <TableCell :class="[densityClass.cell, 'text-right font-medium tabular-nums']">
-                            {{ format(item.running_balance) }}
-                        </TableCell>
-                    </TableRow>
+        <ResponsiveTable
+            :columns="tableColumns"
+            :rows="items as unknown as Record<string, unknown>[]"
+            row-key="id"
+        >
+            <template #cell-date="{ row }">
+                {{ formatDate(asProjectionItem(row).date) }}
+            </template>
 
-                    <!-- Empty state -->
-                    <TableRow v-if="items.length === 0">
-                        <TableCell
-                            colspan="6"
-                            class="text-center py-12 text-muted-foreground"
-                        >
-                            No hay movimientos proyectados.
-                            <br>
-                            <span class="text-xs">
-                                Crea plantillas recurrentes y genera proyecciones para ver el
-                                timeline financiero.
-                            </span>
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-        </div>
+            <template #cell-description="{ row }">
+                <div class="flex items-center gap-2">
+                    <span>{{ asProjectionItem(row).description }}</span>
+                    <Badge
+                        v-if="asProjectionItem(row).source === 'recurring'"
+                        variant="outline"
+                        class="border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
+                    >
+                        Recurrente
+                    </Badge>
+                </div>
+            </template>
+
+            <template #cell-category="{ row }">
+                <div class="flex items-center gap-2">
+                    <span
+                        v-if="asProjectionItem(row).category_color"
+                        class="inline-block size-3 shrink-0 rounded-full"
+                        :style="{
+                            backgroundColor:
+                                asProjectionItem(row).category_color ??
+                                undefined,
+                        }"
+                    />
+                    {{ asProjectionItem(row).category_name ?? 'Sin categoría' }}
+                </div>
+            </template>
+
+            <template #cell-source="{ row }">
+                <span class="text-xs text-muted-foreground">
+                    {{ sourceLabel(asProjectionItem(row).source) }}
+                </span>
+            </template>
+
+            <template #cell-amount="{ row }">
+                <span
+                    class="font-medium tabular-nums"
+                    :class="
+                        asProjectionItem(row).amount >= 0
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                    "
+                >
+                    {{ formatSign(asProjectionItem(row).amount) }}
+                </span>
+            </template>
+
+            <template #cell-running_balance="{ row }">
+                {{ format(asProjectionItem(row).running_balance) }}
+            </template>
+
+            <template #empty>
+                No hay movimientos proyectados.
+                <br />
+                <span class="text-xs">
+                    Crea plantillas recurrentes y genera proyecciones para ver
+                    el timeline financiero.
+                </span>
+            </template>
+        </ResponsiveTable>
+
+        <PaginationControls
+            :pagination="pagination"
+            @update:page="changePage"
+            @update:per-page="changePerPage"
+        />
     </div>
 </template>
