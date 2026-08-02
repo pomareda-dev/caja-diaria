@@ -67,17 +67,17 @@ El `<Link>` de Inertia dispara navegación SPA, pero el `Sheet` no escucha ese e
 `Card.vue` aplica `py-6` (padding vertical 1.5rem) siempre. En mobile las 4 metric cards apilan una bajo otra con `flex-col` del `Card` y ese `py-6` + gap del grid = mucho aire. El grid `grid gap-4 sm:grid-cols-2 lg:grid-cols-4` no tiene opt-in a layout denso.
 
 ### Tareas
-- [ ] **2.1** Evaluar dos enfoques (decidir uno):
-  - **A — Modificador en las cards del Dashboard**: añadir `class="py-3 sm:py-5"` en cada `<Card>` de metric. Mínimo broadcast, no toca el componente base.
-  - **B — Reducir padding por defecto de `Card.vue` a `py-4`** (cuidado: 12 callers). Sopesar impacto en `Preferences.vue`, `Proyeccion/Index.vue`, layouts auth.
-- [ ] **2.2** Revisar el grid de metric cards: `grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4`. Eliminar aire extra en móviles.
-- [ ] **2.3** Reformatear cada Card de métrica a layout horizontal compacto en mobile: label + valor en línea (`flex justify-between items-baseline`) en lugar del `CardHeader`/`CardContent` apilado. Mantener layout vertical en `sm+`.
-- [ ] **2.4** Revisar las cards secundarias (Resumen de presupuesto, Mini conciliación, próximo bloque) — están en `grid lg:grid-cols-2`; en mobile apilan. Confirmar que el espacio interno es razonable; ajustar padding si procede.
+- [x] **2.1** **DECISIÓN: Opción A** — modificador solo en las cards de métrica del Dashboard (`class="py-3 sm:py-5"`). No se tocó `Card.vue` (12 callers; cambiar el default es riesgo de regresión visual sin tests que lo cubran).
+- [x] **2.2** Grid de metric cards: `grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4` (gap reducido en mobile). Contenedor general: `gap-4 rounded-xl p-4 sm:gap-6`.
+- [x] **2.3** Cada Card de métrica reformateada a layout horizontal compacto en mobile: `flex items-baseline justify-between` (label a la izquierda, valor a la derecha, `text-xl`), con `sm:flex-col sm:items-start sm:gap-1` para layout vertical en `sm+` (label arriba, valor `text-2xl` abajo). `CardContent` con `px-4 sm:px-6` en lugar del `CardHeader`+`CardContent` apilado.
+- [x] **2.4** Cards secundarias (Resumen de presupuesto, Mini conciliación, Próximos movimientos, Chart) intactas — tienen contenido real (barras, listas, chart); el `gap` reducido del contenedor ya elimina aire en mobile.
 
 ### Validación
-- [ ] En viewport 375px, comparar altura total del bloque de 4 cards vs. captura "antes".
-- [ ] En `sm` (640px) y `lg` (1024px) sin regresiones visuales.
-- [ ] build + pint.
+- [x] En viewport 375px, cards compactas: layout horizontal label+valor en una línea, sin espacio en blanco vertical.
+- [x] En `sm` (640px) y `lg` (1024px) sin regresiones: layout vertical original en `sm+`, grid 2/4 columnas.
+- [x] Build Vite ✓. `vue-tsc` sin errores en Dashboard ✓. Prettier: mi código nuevo es conforme; el archivo mantiene el drift preexistente en secciones que no toqué (igual que antes del cambio — sin regresión). ESLint: 2 errores de import/order preexistentes (verificados con `git stash`), no introducidos por este cambio.
+
+> **Nota**: el repo tiene 31 archivos con drift de prettier preexistente (`npm run format:check` falla antes y después de este cambio). No es responsabilidad de esta fase. Si se desea, puede proponerse una fase separada de "housekeeping" de formato.
 
 ---
 

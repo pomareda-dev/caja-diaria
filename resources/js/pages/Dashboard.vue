@@ -2,17 +2,12 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { computed } from 'vue';
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { useCurrency } from '@/composables/useCurrency';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BalanceLineChart from '@/components/ui/chart/BalanceLineChart.vue';
+import { useCurrency } from '@/composables/useCurrency';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { dashboard } from '@/routes';
 
 interface BudgetCategory {
@@ -84,7 +79,9 @@ const monthLabel = computed(() => {
     });
 });
 
-const isCurrentMonth = computed(() => props.selectedMonth === props.currentMonth);
+const isCurrentMonth = computed(
+    () => props.selectedMonth === props.currentMonth,
+);
 
 function navigateMonth(delta: number) {
     const date = new Date(selectedDate.value);
@@ -142,11 +139,11 @@ function formatDate(dateStr: string): string {
 <template>
     <Head :title="`Tablero — ${monthLabel}`" />
 
-    <div class="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 sm:gap-6">
         <!-- Header -->
         <div class="mb-2">
             <h1 class="text-2xl font-bold tracking-tight">Tablero</h1>
-            <p class="text-muted-foreground text-sm">
+            <p class="text-sm text-muted-foreground">
                 Resumen financiero del mes
             </p>
         </div>
@@ -163,7 +160,9 @@ function formatDate(dateStr: string): string {
                 <ChevronLeft class="size-4" />
             </Button>
 
-            <span class="min-w-[160px] text-center text-lg font-semibold capitalize">
+            <span
+                class="min-w-[160px] text-center text-lg font-semibold capitalize"
+            >
                 {{ monthLabel }}
             </span>
 
@@ -188,62 +187,90 @@ function formatDate(dateStr: string): string {
         </div>
 
         <!-- Metric Cards (4) -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-                <CardHeader class="pb-2">
-                    <CardTitle class="text-sm font-medium text-muted-foreground">
-                        Balance actual
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p
-                        class="text-2xl font-bold tabular-nums"
-                        :class="cards.realBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+        <div class="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <Card class="py-3 sm:py-5">
+                <CardContent class="px-4 sm:px-6">
+                    <div
+                        class="flex items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:gap-1"
                     >
-                        {{ format(cards.realBalance) }}
-                    </p>
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Balance actual
+                        </CardTitle>
+                        <p
+                            class="text-xl font-bold tabular-nums sm:text-2xl"
+                            :class="
+                                cards.realBalance >= 0
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-red-600 dark:text-red-400'
+                            "
+                        >
+                            {{ format(cards.realBalance) }}
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader class="pb-2">
-                    <CardTitle class="text-sm font-medium text-muted-foreground">
-                        Ingresos del mes
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
-                        {{ formatSigned(cards.monthIncome) }}
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader class="pb-2">
-                    <CardTitle class="text-sm font-medium text-muted-foreground">
-                        Gastos del mes
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-2xl font-bold text-red-600 dark:text-red-400 tabular-nums">
-                        -{{ format(cards.monthExpense) }}
-                    </p>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader class="pb-2">
-                    <CardTitle class="text-sm font-medium text-muted-foreground">
-                        Proyección a fin de mes
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p
-                        class="text-2xl font-bold tabular-nums"
-                        :class="cards.projectedEndOfMonth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+            <Card class="py-3 sm:py-5">
+                <CardContent class="px-4 sm:px-6">
+                    <div
+                        class="flex items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:gap-1"
                     >
-                        {{ format(cards.projectedEndOfMonth) }}
-                    </p>
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Ingresos del mes
+                        </CardTitle>
+                        <p
+                            class="text-xl font-bold text-green-600 tabular-nums sm:text-2xl dark:text-green-400"
+                        >
+                            {{ formatSigned(cards.monthIncome) }}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card class="py-3 sm:py-5">
+                <CardContent class="px-4 sm:px-6">
+                    <div
+                        class="flex items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:gap-1"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Gastos del mes
+                        </CardTitle>
+                        <p
+                            class="text-xl font-bold text-red-600 tabular-nums sm:text-2xl dark:text-red-400"
+                        >
+                            -{{ format(cards.monthExpense) }}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card class="py-3 sm:py-5">
+                <CardContent class="px-4 sm:px-6">
+                    <div
+                        class="flex items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:gap-1"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Proyección a fin de mes
+                        </CardTitle>
+                        <p
+                            class="text-xl font-bold tabular-nums sm:text-2xl"
+                            :class="
+                                cards.projectedEndOfMonth >= 0
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-red-600 dark:text-red-400'
+                            "
+                        >
+                            {{ format(cards.projectedEndOfMonth) }}
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -253,7 +280,9 @@ function formatDate(dateStr: string): string {
             <!-- Budget Overview -->
             <Card>
                 <CardHeader>
-                    <CardTitle class="text-base">Resumen de presupuesto</CardTitle>
+                    <CardTitle class="text-base"
+                        >Resumen de presupuesto</CardTitle
+                    >
                 </CardHeader>
                 <CardContent>
                     <div v-if="budgetOverview.length > 0" class="space-y-4">
@@ -262,40 +291,64 @@ function formatDate(dateStr: string): string {
                             :key="cat.id"
                             class="space-y-1.5"
                         >
-                            <div class="flex items-center justify-between text-sm">
+                            <div
+                                class="flex items-center justify-between text-sm"
+                            >
                                 <div class="flex items-center gap-2">
                                     <span
                                         v-if="cat.color"
-                                        class="inline-block size-2.5 rounded-full shrink-0"
+                                        class="inline-block size-2.5 shrink-0 rounded-full"
                                         :style="{ backgroundColor: cat.color }"
                                     />
-                                    <span class="font-medium">{{ cat.name }}</span>
+                                    <span class="font-medium">{{
+                                        cat.name
+                                    }}</span>
                                 </div>
-                                <span class="tabular-nums text-muted-foreground">
+                                <span
+                                    class="text-muted-foreground tabular-nums"
+                                >
                                     {{ format(cat.spent) }}
                                     /
                                     {{ format(cat.monthly_limit) }}
                                 </span>
                             </div>
                             <div class="flex items-center gap-3">
-                                <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                                <div
+                                    class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+                                >
                                     <div
                                         role="progressbar"
-                                        :aria-valuenow="Math.round(progressPercentage(cat))"
+                                        :aria-valuenow="
+                                            Math.round(progressPercentage(cat))
+                                        "
                                         aria-valuemin="0"
                                         aria-valuemax="100"
                                         :aria-label="`Presupuesto ${cat.name}: ${Math.round(progressPercentage(cat))}% usado`"
                                         class="h-full rounded-full transition-all duration-300"
-                                        :class="progressColor(progressPercentage(cat))"
-                                        :style="{ width: Math.min(progressPercentage(cat), 100) + '%' }"
+                                        :class="
+                                            progressColor(
+                                                progressPercentage(cat),
+                                            )
+                                        "
+                                        :style="{
+                                            width:
+                                                Math.min(
+                                                    progressPercentage(cat),
+                                                    100,
+                                                ) + '%',
+                                        }"
                                     />
                                 </div>
                                 <span
-                                    class="text-xs font-medium tabular-nums shrink-0"
+                                    class="shrink-0 text-xs font-medium tabular-nums"
                                     :class="{
-                                        'text-red-600 dark:text-red-400': progressPercentage(cat) > 100,
-                                        'text-amber-600 dark:text-amber-400': progressPercentage(cat) >= 75 && progressPercentage(cat) <= 100,
-                                        'text-green-600 dark:text-green-400': progressPercentage(cat) < 75,
+                                        'text-red-600 dark:text-red-400':
+                                            progressPercentage(cat) > 100,
+                                        'text-amber-600 dark:text-amber-400':
+                                            progressPercentage(cat) >= 75 &&
+                                            progressPercentage(cat) <= 100,
+                                        'text-green-600 dark:text-green-400':
+                                            progressPercentage(cat) < 75,
                                     }"
                                 >
                                     {{ Math.round(progressPercentage(cat)) }}%
@@ -303,7 +356,10 @@ function formatDate(dateStr: string): string {
                             </div>
                         </div>
                     </div>
-                    <p v-else class="text-sm text-muted-foreground py-4 text-center">
+                    <p
+                        v-else
+                        class="py-4 text-center text-sm text-muted-foreground"
+                    >
                         No hay categorías con presupuesto definido.
                     </p>
                 </CardContent>
@@ -317,21 +373,37 @@ function formatDate(dateStr: string): string {
                 <CardContent>
                     <div class="flex flex-col gap-4">
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-muted-foreground">Total cuentas</span>
-                            <span class="text-sm font-medium tabular-nums">{{ format(reconciliation.totalAccounts) }}</span>
+                            <span class="text-sm text-muted-foreground"
+                                >Total cuentas</span
+                            >
+                            <span class="text-sm font-medium tabular-nums">{{
+                                format(reconciliation.totalAccounts)
+                            }}</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-sm text-muted-foreground">Balance real</span>
-                            <span class="text-sm font-medium tabular-nums">{{ format(reconciliation.realBalance) }}</span>
+                            <span class="text-sm text-muted-foreground"
+                                >Balance real</span
+                            >
+                            <span class="text-sm font-medium tabular-nums">{{
+                                format(reconciliation.realBalance)
+                            }}</span>
                         </div>
-                        <hr class="border-t border-border">
+                        <hr class="border-t border-border" />
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-medium">Diferencia</span>
                             <span
                                 class="text-sm font-bold tabular-nums"
-                                :class="reconciliation.reconciled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                :class="
+                                    reconciliation.reconciled
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-red-600 dark:text-red-400'
+                                "
                             >
-                                {{ reconciliation.reconciled ? '✅ Conciliado' : `⚠️ ${format(Math.abs(reconciliation.difference))}` }}
+                                {{
+                                    reconciliation.reconciled
+                                        ? '✅ Conciliado'
+                                        : `⚠️ ${format(Math.abs(reconciliation.difference))}`
+                                }}
                             </span>
                         </div>
                     </div>
@@ -344,40 +416,57 @@ function formatDate(dateStr: string): string {
             <!-- Upcoming Projected Movements -->
             <Card>
                 <CardHeader>
-                    <CardTitle class="text-base">Próximos movimientos (7 días)</CardTitle>
+                    <CardTitle class="text-base"
+                        >Próximos movimientos (7 días)</CardTitle
+                    >
                 </CardHeader>
                 <CardContent>
-                    <div v-if="upcomingProjections.length > 0" class="space-y-3">
+                    <div
+                        v-if="upcomingProjections.length > 0"
+                        class="space-y-3"
+                    >
                         <div
                             v-for="mov in upcomingProjections"
                             :key="mov.id"
                             class="flex items-center justify-between gap-4 rounded-md border p-3"
                         >
-                            <div class="flex-1 min-w-0">
+                            <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm font-medium truncate">{{ mov.description }}</span>
+                                    <span
+                                        class="truncate text-sm font-medium"
+                                        >{{ mov.description }}</span
+                                    >
                                     <Badge
                                         v-if="mov.is_projected"
                                         variant="outline"
-                                        class="text-amber-600 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950 text-[10px] px-1.5 py-0"
+                                        class="border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
                                     >
                                         Proyectado
                                     </Badge>
                                 </div>
-                                <p class="text-xs text-muted-foreground mt-0.5">
+                                <p class="mt-0.5 text-xs text-muted-foreground">
                                     {{ formatDate(mov.date) }}
-                                    <span v-if="mov.category_name"> · {{ mov.category_name }}</span>
+                                    <span v-if="mov.category_name">
+                                        · {{ mov.category_name }}</span
+                                    >
                                 </p>
                             </div>
                             <span
-                                class="text-sm font-bold tabular-nums shrink-0"
-                                :class="mov.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                class="shrink-0 text-sm font-bold tabular-nums"
+                                :class="
+                                    mov.amount >= 0
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-red-600 dark:text-red-400'
+                                "
                             >
                                 {{ formatSigned(mov.amount) }}
                             </span>
                         </div>
                     </div>
-                    <p v-else class="text-sm text-muted-foreground py-4 text-center">
+                    <p
+                        v-else
+                        class="py-4 text-center text-sm text-muted-foreground"
+                    >
                         No hay movimientos proyectados para los próximos 7 días.
                     </p>
                 </CardContent>
