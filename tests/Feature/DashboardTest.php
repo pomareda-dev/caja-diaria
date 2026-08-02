@@ -659,10 +659,10 @@ test('upcoming projections include is_projected flag', function () {
 
 test('projected end of month includes recurring source future movements', function () {
     // Per plan §3.2 a movement is "projected" if date > today, regardless of source.
-    // Recurring-generated rows (source='recurring') are excluded from realBalance
-    // (which filters date<=today AND source IN manual,import AND is_projected=false),
-    // so they MUST be included by futureSum to be counted once in the projection.
-    // This test locks that behavior and prevents regressing to the inverse bug.
+    // realBalance only sums date <= today (and is_projected=false), so a recurring
+    // future row is excluded there by date; futureSum (date > today) must then
+    // include it to be counted once in the projection. The two date ranges are
+    // disjoint, so there is no double counting. This test locks that behavior.
     $user = User::factory()->create();
     $this->actingAs($user);
 

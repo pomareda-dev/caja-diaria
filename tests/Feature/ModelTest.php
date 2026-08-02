@@ -286,7 +286,7 @@ test('projected scope returns movements with date > today', function () {
     expect($projected)->toHaveCount(2);
 });
 
-test('openingBalance returns sum of manual and import movements before month start', function () {
+test('openingBalance returns sum of real movements before month start regardless of source', function () {
     $user = User::factory()->create();
     $monthStart = Carbon::parse('2026-07-01');
 
@@ -306,7 +306,7 @@ test('openingBalance returns sum of manual and import movements before month sta
         'source' => 'import',
     ]);
 
-    // Before July, recurring — should be excluded
+    // Before July, recurring with is_projected=false (made real) — should be counted
     Movement::factory()->create([
         'user_id' => $user->id,
         'date' => '2026-06-01',
@@ -324,9 +324,9 @@ test('openingBalance returns sum of manual and import movements before month sta
 
     $balance = Movement::openingBalance($monthStart, $user->id);
 
-    // 1000 + (-200) = 800
-    expect((float) $balance)->toBe(800.0);
-    expect($balance)->toBe('800.00');
+    // 1000 + (-200) + 500 = 1300
+    expect((float) $balance)->toBe(1300.0);
+    expect($balance)->toBe('1300.00');
 });
 
 // ─── Unique constraints ───────────────────────────────────────────

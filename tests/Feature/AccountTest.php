@@ -363,7 +363,8 @@ test('reconciliation real balance uses all real movements up to today', function
         'source' => 'manual',
     ]);
 
-    // Recurring movement — should NOT be counted (not manual/import)
+    // Recurring movement with is_projected=false (made real) — should be counted.
+    // Source is provenance, not reality: a recurring row counts once unflagged.
     Movement::factory()->create([
         'user_id' => $user->id,
         'date' => '2026-07-01',
@@ -373,9 +374,54 @@ test('reconciliation real balance uses all real movements up to today', function
 
     $response = $this->get(route('cuentas.index'));
 
-    // realBalance = 2000 (opening) + 500 - 200 = 2300
+    // realBalance = 2000 (opening) + 500 - 200 + 100 (recurring made real) = 2400
     $response->assertInertia(fn ($page) => $page
-        ->where('reconciliation.realBalance', 2300)
+        ->where('reconciliation.realBalance', 2400)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('reconciliation reconciles when a recurring projection is unflagged to real', function () {
+    // Regression: the user flagged a generated recurring expense (e.g. rent) as
+    // real (is_projected=false). It must count in realBalance so the mini
+    // reconciliation matches the account total instead of showing a phantom gap.
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-08-02'));
+
+    Account::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'BCP1',
+        'balance' => 1430.60,
+        'exclude_from_reconciliation' => false,
+    ]);
+
+    // Opening + income before the recurring expense
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-07-01',
+        'amount' => 2980.60,
+        'source' => 'manual',
+    ]);
+
+    // Recurring expense now marked as real (was a projected row)
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-08-01',
+        'amount' => -1550,
+        'source' => 'recurring',
+        'is_projected' => false,
+    ]);
+
+    $response = $this->get(route('cuentas.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('reconciliation.totalAccounts', 1430.60)
+        ->where('reconciliation.realBalance', 1430.60)
+        ->where('reconciliation.difference', 0)
+        ->where('reconciliation.reconciled', true)
     );
 
     Carbon::setTestNow();

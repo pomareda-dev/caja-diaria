@@ -442,7 +442,7 @@ test('projected movements are marked correctly', function () {
     Carbon::setTestNow();
 });
 
-test('opening balance excludes projected and recurring movements from previous months', function () {
+test('opening balance excludes projected movements but includes real recurring ones from previous months', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -456,7 +456,7 @@ test('opening balance excludes projected and recurring movements from previous m
         'source' => 'manual',
     ]);
 
-    // Recurring before month — should be excluded by openingBalance method
+    // Recurring before month with is_projected=false (made real) — should be counted
     Movement::factory()->create([
         'user_id' => $user->id,
         'date' => '2026-06-01',
@@ -466,9 +466,9 @@ test('opening balance excludes projected and recurring movements from previous m
 
     $response = $this->get(route('movimientos.index', ['month' => '2026-07']));
 
-    // openingBalance only sums manual + import, so recurring 500 is excluded
+    // openingBalance sums real movements (manual 1000 + recurring 500) = 1500
     $response->assertInertia(fn ($page) => $page
-        ->where('openingBalance', 1000)
+        ->where('openingBalance', 1500)
     );
 
     Carbon::setTestNow();
