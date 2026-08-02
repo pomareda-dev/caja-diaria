@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical } from '@lucide/vue';
-import { ref, computed } from 'vue';
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { ref, computed, watch } from 'vue';
 import draggable from 'vuedraggable';
 import MovementDialog from '@/components/movements/MovementDialog.vue';
 import type { MovementData, CategoryData } from '@/components/movements/MovementDialog.vue';
@@ -30,6 +29,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCurrency } from '@/composables/useCurrency';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { useSettings } from '@/composables/useSettings';
 import movimientos from '@/routes/movimientos';
 
@@ -182,8 +182,21 @@ return format(value);
 }
 
 // --- Reorder handlers ---
+// Display list for "Actuales": newest-first. Props keep the chronological
+// (oldest-first) order so running_balance and summary stay untouched; this
+// ref is a reversed copy vuedraggable may mutate during a drag.
+const realList = ref<MovementData[]>([]);
+
+watch(
+    () => props.realMovements,
+    (movements) => {
+        realList.value = [...movements].reverse();
+    },
+    { immediate: true },
+);
+
 function onReorderReales() {
-    const ids = props.realMovements.map((m) => m.id);
+    const ids = [...realList.value].map((m) => m.id).reverse();
 
     if (ids.length <= 1) {
 return;
@@ -278,46 +291,28 @@ return;
                 <CardTitle class="text-base">Actuales</CardTitle>
             </CardHeader>
             <CardContent class="p-0">
-                <Table>
+                <Table containerClass="max-h-[560px] overflow-y-auto">
                     <TableHeader>
                         <TableRow>
-                            <TableHead :class="[densityClass.header, 'w-[32px]']"></TableHead>
-                            <TableHead :class="densityClass.header">Fecha</TableHead>
-                            <TableHead :class="densityClass.header">Movimiento</TableHead>
-                            <TableHead :class="densityClass.header">Tipo</TableHead>
-                            <TableHead :class="[densityClass.header, 'text-right']">Cantidad</TableHead>
-                            <TableHead :class="[densityClass.header, 'text-right']">Balance</TableHead>
-                            <TableHead :class="[densityClass.header, 'w-[80px]']"></TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[32px]', 'sticky top-0 z-10 bg-background']"></TableHead>
+                            <TableHead :class="[densityClass.header, 'sticky top-0 z-10 bg-background']">Fecha</TableHead>
+                            <TableHead :class="[densityClass.header, 'sticky top-0 z-10 bg-background']">Movimiento</TableHead>
+                            <TableHead :class="[densityClass.header, 'sticky top-0 z-10 bg-background']">Tipo</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right', 'sticky top-0 z-10 bg-background']">Cantidad</TableHead>
+                            <TableHead :class="[densityClass.header, 'text-right', 'sticky top-0 z-10 bg-background']">Balance</TableHead>
+                            <TableHead :class="[densityClass.header, 'w-[80px]', 'sticky top-0 z-10 bg-background']"></TableHead>
                         </TableRow>
                     </TableHeader>
-                    <draggable
-                        :list="realMovements"
-                        item-key="id"
-                        tag="tbody"
-                        :class="'[&_tr:last-child]:border-0'"
-                        :handle="'.drag-handle'"
-                        :animation="150"
-                        @end="onReorderReales"
-                    >
-                        <template #header>
-                            <!-- Opening balance row -->
-                            <TableRow class="bg-muted/30">
-                                <TableCell></TableCell>
-                                <TableCell :class="[densityClass.cell, 'font-medium text-muted-foreground']" colspan="2">
-                                    Saldo inicial
-                                </TableCell>
-                                <TableCell></TableCell>
-                                <TableCell :class="[densityClass.cell, 'text-right font-medium text-muted-foreground']">
-                                    {{ format(openingBalance) }}
-                                </TableCell>
-                                <TableCell :class="[densityClass.cell, 'text-right font-medium']">
-                                    {{ format(openingBalance) }}
-                                </TableCell>
-                                <TableCell></TableCell>
-                            </TableRow>
-                        </template>
-
-                        <template #item="{ element: movement }">
+                        <draggable
+                            :list="realList"
+                            item-key="id"
+                            tag="tbody"
+                            :class="'[&_tr:last-child]:border-0'"
+                            :handle="'.drag-handle'"
+                            :animation="150"
+                            @end="onReorderReales"
+                        >
+                            <template #item="{ element: movement }">
                             <TableRow class="group">
                                 <TableCell class="p-0 pl-2">
                                     <GripVertical class="size-4 drag-handle cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
@@ -372,8 +367,24 @@ return;
                         </template>
 
                         <template #footer>
+                            <!-- Opening balance row: chronological start, shown last in the newest-first view -->
+                            <TableRow class="bg-muted/30">
+                                <TableCell></TableCell>
+                                <TableCell :class="[densityClass.cell, 'font-medium text-muted-foreground']" colspan="2">
+                                    Saldo inicial
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium text-muted-foreground']">
+                                    {{ format(openingBalance) }}
+                                </TableCell>
+                                <TableCell :class="[densityClass.cell, 'text-right font-medium']">
+                                    {{ format(openingBalance) }}
+                                </TableCell>
+                                <TableCell></TableCell>
+                            </TableRow>
+
                             <!-- Empty state for Reales -->
-                            <TableRow v-if="realMovements.length === 0">
+                            <TableRow v-if="realList.length === 0">
                                 <TableCell
                                     colspan="7"
                                     class="text-center py-8 text-muted-foreground"
@@ -382,8 +393,8 @@ return;
                                 </TableCell>
                             </TableRow>
                         </template>
-                    </draggable>
-                </Table>
+                        </draggable>
+                    </Table>
             </CardContent>
         </Card>
 
