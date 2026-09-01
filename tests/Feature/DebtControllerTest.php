@@ -7,6 +7,75 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+// ─── Index ────────────────────────────────────────────────────────
+
+test('index renders the debts page with the debt payload', function () {
+    $user = User::factory()->create();
+
+    Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'installment_amount' => 300,
+        'installments_count' => 4,
+        'payment_dates' => [
+            now()->addMonth()->toDateString(),
+            now()->addMonths(2)->toDateString(),
+            now()->addMonths(3)->toDateString(),
+            now()->addMonths(4)->toDateString(),
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('deudas.index'));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Deudas/Index')
+        ->has('debts', 1)
+        ->where('debts.0.name', 'Préstamo personal')
+        ->where('debts.0.principal_amount', fn ($value) => (float) $value === 1000.0)
+        ->where('debts.0.installment_amount', fn ($value) => (float) $value === 300.0)
+        ->where('debts.0.installments_count', 4)
+        ->where('debts.0.rate_factor', 1.2)
+        ->where('debts.0.total_to_pay', fn ($value) => (float) $value === 1200.0)
+        ->where('debts.0.paid_installments', 0)
+        ->where('debts.0.remaining', fn ($value) => (float) $value === 1200.0)
+        ->where('debts.0.can_delete', true)
+        ->where('debts.0.is_active', true));
+});
+
+test('index flags can_delete false and counts paid installments when real payments exist', function () {
+    $user = User::factory()->create();
+
+    $debt = Debt::factory()->create([
+        'user_id' => $user->id,
+        'principal_amount' => 1000,
+        'installment_amount' => 250,
+        'installments_count' => 4,
+    ]);
+
+    // Real disbursement (not an installment) + one real payment
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => 1000,
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('deudas.index'));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Deudas/Index')
+        ->where('debts.0.paid_installments', 1)
+        ->where('debts.0.remaining', fn ($value) => (float) $value === 750.0)
+        ->where('debts.0.can_delete', false));
+});
+
 // ─── Validation ───────────────────────────────────────────────────
 
 test('store validates payment_dates count matches installments_count', function () {

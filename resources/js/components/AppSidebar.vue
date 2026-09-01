@@ -2,6 +2,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
+    HandCoins,
     LayoutDashboard,
     LineChart,
     Repeat,
@@ -25,6 +26,7 @@ import {
 import { dashboard } from '@/routes';
 import categorias from '@/routes/categorias';
 import cuentas from '@/routes/cuentas';
+import deudas from '@/routes/deudas';
 import movimientos from '@/routes/movimientos';
 import proyeccion from '@/routes/proyeccion';
 import recurrentes from '@/routes/recurrentes';
@@ -55,6 +57,11 @@ const mainNavItems: NavItem[] = [
         title: 'Recurrentes',
         href: recurrentes.index(),
         icon: Repeat,
+    },
+    {
+        title: 'Deudas',
+        href: deudas.index(),
+        icon: HandCoins,
     },
     {
         title: 'Proyección',

@@ -23,7 +23,7 @@ class DebtController extends Controller
     public function index(Request $request): Response
     {
         $debts = Debt::where('user_id', $request->user()->id)
-            ->withCount(['movements as paid_installments_count' => function ($q) {
+            ->withCount(['movements as real_movements_count' => function ($q) {
                 $q->where('is_projected', false);
             }])
             ->orderBy('created_at', 'desc')
@@ -43,6 +43,7 @@ class DebtController extends Controller
                 'total_to_pay' => (float) $debt->total_to_pay,
                 'paid_installments' => $debt->paid_installments,
                 'remaining' => (float) $debt->remaining,
+                'can_delete' => $debt->real_movements_count === 0,
                 'is_active' => $debt->is_active,
             ]),
         ]);

@@ -90,21 +90,26 @@ class Debt extends Model
     }
 
     /**
-     * Count of non-projected (real) movements linked to this debt.
+     * Count of real (non-projected) installment payments linked to this debt.
+     * The disbursement movement (positive amount) is not an installment.
      */
     public function getPaidInstallmentsAttribute(): int
     {
-        return $this->movements()->where('is_projected', false)->count();
+        return $this->movements()
+            ->where('is_projected', false)
+            ->where('amount', '<', 0)
+            ->count();
     }
 
     /**
-     * Remaining balance: total to pay minus sum of real movement amounts.
+     * Remaining balance: total to pay minus real installment payments.
      * Never negative.
      */
     public function getRemainingAttribute(): string
     {
         $paid = (float) $this->movements()
             ->where('is_projected', false)
+            ->where('amount', '<', 0)
             ->sum('amount');
 
         $remaining = max(0, (float) $this->total_to_pay - abs($paid));
