@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Debts
     Route::resource('deudas', DebtController::class)
-        ->except(['show', 'edit', 'create'])
+        ->except(['edit', 'create'])
         ->parameters(['deudas' => 'debt']);
     Route::post('deudas/{debt}/payoff', [DebtController::class, 'payoff'])->name('deudas.payoff');
 

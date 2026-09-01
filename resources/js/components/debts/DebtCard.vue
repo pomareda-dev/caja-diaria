@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { HandCoins, Pencil, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
 import type { DebtData } from '@/components/debts/types';
@@ -18,6 +19,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCurrency } from '@/composables/useCurrency';
+import deudas from '@/routes/deudas';
 
 const props = defineProps<{
     debt: DebtData;
@@ -98,7 +100,12 @@ function formatClosedAt(closedAt: string): string {
         <CardHeader>
             <div class="flex items-start justify-between gap-2">
                 <CardTitle class="text-base leading-snug">
-                    {{ debt.name }}
+                    <Link
+                        :href="deudas.show.url(debt.id)"
+                        class="transition-colors hover:underline"
+                    >
+                        {{ debt.name }}
+                    </Link>
                 </CardTitle>
                 <div class="flex shrink-0 items-center gap-1.5">
                     <Badge

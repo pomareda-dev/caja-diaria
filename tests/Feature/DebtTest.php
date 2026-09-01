@@ -241,6 +241,48 @@ test('remaining ignores the disbursement movement', function () {
     expect($debt->fresh()->remaining)->toBe('750.00');
 });
 
+test('paidAmount sums only real payments and ignores the disbursement', function () {
+    $user = User::factory()->create();
+    $debt = Debt::factory()->create([
+        'user_id' => $user->id,
+        'principal_amount' => 1000,
+        'installment_amount' => 250,
+        'installments_count' => 4,
+    ]);
+
+    // Real disbursement (+1000): excluded
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => 1000,
+        'is_projected' => false,
+    ]);
+
+    // Real installment payments (-250 and a partial -100)
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => -100,
+        'is_projected' => false,
+    ]);
+
+    // Projected movement: excluded
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'amount' => -250,
+        'is_projected' => true,
+    ]);
+
+    expect($debt->paid_amount)->toBe('350.00');
+});
+
 test('remaining never goes below zero', function () {
     $user = User::factory()->create();
     $debt = Debt::factory()->create([

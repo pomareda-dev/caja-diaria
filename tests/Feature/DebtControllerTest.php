@@ -76,6 +76,128 @@ test('index flags can_delete false and counts paid installments when real paymen
         ->where('debts.0.can_delete', false));
 });
 
+// ─── Show ─────────────────────────────────────────────────────────
+
+test('show renders debt detail with correct sums for partial payments', function () {
+    $user = User::factory()->create();
+
+    $debt = Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'installment_amount' => 250,
+        'installments_count' => 4,
+    ]);
+
+    // 2 real installment payments (partial progress)
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->subMonth()->toDateString(),
+        'description' => 'Cuota 1',
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->toDateString(),
+        'description' => 'Cuota 2',
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+
+    // 2 projected installments
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->addMonth()->toDateString(),
+        'description' => 'Cuota 3',
+        'amount' => -250,
+        'is_projected' => true,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->addMonths(2)->toDateString(),
+        'description' => 'Cuota 4',
+        'amount' => -250,
+        'is_projected' => true,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('deudas.show', $debt));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Deudas/Show')
+        ->where('debt.name', 'Préstamo personal')
+        ->where('debt.total_to_pay', fn ($value) => (float) $value === 1000.0)
+        ->where('debt.paid', fn ($value) => (float) $value === 500.0)
+        ->where('debt.remaining', fn ($value) => (float) $value === 500.0)
+        ->where('debt.paid_installments', 2)
+        ->has('payment_history', 2)
+        ->where('payment_history.0.description', 'Cuota 2')
+        ->where('payment_history.1.description', 'Cuota 1')
+        ->has('schedule', 2)
+        ->where('schedule.0.description', 'Cuota 3')
+        ->where('schedule.1.description', 'Cuota 4')
+        ->where('debt', fn ($debt) => (float) $debt['paid'] + (float) $debt['remaining'] === (float) $debt['total_to_pay']));
+});
+
+test('show includes the payoff movement in history and empty schedule when closed', function () {
+    $user = User::factory()->create();
+
+    $debt = Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'installment_amount' => 250,
+        'installments_count' => 4,
+    ]);
+
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->subMonth()->toDateString(),
+        'description' => 'Cuota 1',
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => now()->addMonth()->toDateString(),
+        'description' => 'Cuota 2',
+        'amount' => -250,
+        'is_projected' => true,
+    ]);
+
+    // Pay off early through the real endpoint: closes the debt,
+    // creates the payoff movement and deletes projected installments
+    $this->actingAs($user)->post(route('deudas.payoff', $debt), [
+        'amount' => 500,
+    ])->assertRedirect();
+
+    $response = $this->actingAs($user)->get(route('deudas.show', $debt));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Deudas/Show')
+        ->where('debt.is_active', false)
+        ->has('payment_history', 2)
+        ->where('payment_history.0.description', fn ($value) => str_contains($value, 'Liquidación anticipada'))
+        ->has('schedule', 0));
+});
+
+test('user cannot view another users debt', function () {
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
+
+    $debt = Debt::factory()->create(['user_id' => $user1->id]);
+
+    $response = $this->actingAs($user2)->get(route('deudas.show', $debt));
+
+    $response->assertStatus(403);
+});
+
 // ─── Validation ───────────────────────────────────────────────────
 
 test('store validates payment_dates count matches installments_count', function () {

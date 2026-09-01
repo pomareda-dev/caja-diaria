@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property-read float $rate_factor
  * @property-read string $total_to_pay
  * @property-read int $paid_installments
+ * @property-read string $paid_amount
  * @property-read string $remaining
  * @property-read bool $is_active
  */
@@ -115,6 +116,20 @@ class Debt extends Model
         $remaining = max(0, (float) $this->total_to_pay - abs($paid));
 
         return number_format($remaining, 2, '.', '');
+    }
+
+    /**
+     * Total amount paid back: abs sum of real negative movements
+     * (installment payments and early payoff). The disbursement is excluded.
+     */
+    public function getPaidAmountAttribute(): string
+    {
+        $paid = (float) $this->movements()
+            ->where('is_projected', false)
+            ->where('amount', '<', 0)
+            ->sum('amount');
+
+        return number_format(abs($paid), 2, '.', '');
     }
 
     /**

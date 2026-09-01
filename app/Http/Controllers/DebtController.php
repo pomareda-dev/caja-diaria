@@ -50,6 +50,67 @@ class DebtController extends Controller
     }
 
     /**
+     * Display the debt detail: totals, payment history and schedule.
+     */
+    public function show(Request $request, Debt $debt): Response
+    {
+        if ($debt->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $mapMovement = fn (Movement $movement): array => [
+            'id' => $movement->id,
+            'date' => $movement->date->toDateString(),
+            'description' => $movement->description,
+            'category_id' => $movement->category_id,
+            'category_name' => $movement->category?->name,
+            'category_color' => $movement->category?->color,
+            'amount' => (float) $movement->amount,
+            'is_projected' => (bool) $movement->is_projected,
+            'notes' => $movement->notes,
+        ];
+
+        $paymentHistory = $debt->movements()
+            ->where('is_projected', false)
+            ->with('category')
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->get()
+            ->map($mapMovement)
+            ->values();
+
+        $schedule = $debt->movements()
+            ->where('is_projected', true)
+            ->with('category')
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get()
+            ->map($mapMovement)
+            ->values();
+
+        return Inertia::render('Deudas/Show', [
+            'debt' => [
+                'id' => $debt->id,
+                'name' => $debt->name,
+                'principal_amount' => (float) $debt->principal_amount,
+                'disbursement_date' => $debt->disbursement_date->format('Y-m-d'),
+                'installment_amount' => (float) $debt->installment_amount,
+                'installments_count' => $debt->installments_count,
+                'payment_dates' => $debt->payment_dates,
+                'closed_at' => $debt->closed_at?->toDateTimeString(),
+                'rate_factor' => $debt->rate_factor,
+                'total_to_pay' => (float) $debt->total_to_pay,
+                'paid' => (float) $debt->paid_amount,
+                'paid_installments' => $debt->paid_installments,
+                'remaining' => (float) $debt->remaining,
+                'is_active' => $debt->is_active,
+            ],
+            'payment_history' => $paymentHistory->all(),
+            'schedule' => $schedule->all(),
+        ]);
+    }
+
+    /**
      * Store a newly created debt with its movements in a transaction.
      */
     public function store(StoreDebtRequest $request): RedirectResponse
