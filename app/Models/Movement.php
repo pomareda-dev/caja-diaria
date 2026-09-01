@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string $amount
  * @property string $source
  * @property int|null $recurring_id
+ * @property int|null $debt_id
  * @property string|null $notes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -34,6 +35,7 @@ class Movement extends Model
         'amount',
         'source',
         'recurring_id',
+        'debt_id',
         'notes',
         'is_projected',
         'sort_order',
@@ -62,6 +64,11 @@ class Movement extends Model
     public function recurringTransaction(): BelongsTo
     {
         return $this->belongsTo(RecurringTransaction::class, 'recurring_id');
+    }
+
+    public function debt(): BelongsTo
+    {
+        return $this->belongsTo(Debt::class);
     }
 
     public function scopeForMonth(Builder $query, Carbon $month): void
