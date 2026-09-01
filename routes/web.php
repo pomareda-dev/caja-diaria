@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DebtController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\RecurringTransactionController;
@@ -40,6 +41,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('recurrentes/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurrentes.patch');
     Route::delete('recurrentes/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurrentes.destroy');
     Route::post('recurrentes/regenerate', [RecurringTransactionController::class, 'regenerate'])->name('recurrentes.regenerate');
+
+    // Debts
+    Route::resource('deudas', DebtController::class)
+        ->except(['show', 'edit', 'create'])
+        ->parameters(['deudas' => 'debt']);
+    Route::post('deudas/{debt}/payoff', [DebtController::class, 'payoff'])->name('deudas.payoff');
 
     // Projection view
     Route::get('proyeccion', [ProjectionController::class, 'index'])->name('proyeccion.index');
