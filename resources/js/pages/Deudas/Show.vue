@@ -2,8 +2,13 @@
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import DebtMovementsList from '@/components/debts/DebtMovementsList.vue';
+import DebtStrategyComparison from '@/components/debts/DebtStrategyComparison.vue';
 import DebtTotals from '@/components/debts/DebtTotals.vue';
-import type { DebtDetailData, DebtMovementData } from '@/components/debts/types';
+import type {
+    DebtDetailData,
+    DebtMovementData,
+    DebtStrategyData,
+} from '@/components/debts/types';
 import { Badge } from '@/components/ui/badge';
 import { useCurrency } from '@/composables/useCurrency';
 import deudas from '@/routes/deudas';
@@ -12,6 +17,7 @@ const props = defineProps<{
     debt: DebtDetailData;
     payment_history: DebtMovementData[];
     schedule: DebtMovementData[];
+    strategy: DebtStrategyData;
 }>();
 
 defineOptions({
@@ -72,7 +78,9 @@ const scheduleEmptyMessage = computed(() => {
                 >
                     {{ factorLabel }}
                 </Badge>
-                <Badge v-if="!debt.is_active" variant="secondary">Cerrada</Badge>
+                <Badge v-if="!debt.is_active" variant="secondary"
+                    >Cerrada</Badge
+                >
             </div>
             <p class="text-sm text-muted-foreground">
                 Desembolso de
@@ -102,6 +110,13 @@ const scheduleEmptyMessage = computed(() => {
             title="Cronograma"
             :movements="schedule"
             :empty-message="scheduleEmptyMessage"
+        />
+
+        <!-- Payment strategy comparison across active debts -->
+        <DebtStrategyComparison
+            v-if="strategy.avalanche.length > 0"
+            :strategy="strategy"
+            :current-debt-id="debt.id"
         />
     </div>
 </template>

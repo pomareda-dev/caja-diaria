@@ -198,6 +198,50 @@ test('user cannot view another users debt', function () {
     $response->assertStatus(403);
 });
 
+test('show includes the payment strategy for active debts', function () {
+    $user = User::factory()->create();
+
+    $tarjeta = Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Tarjeta',
+        'principal_amount' => 1000,
+        'installment_amount' => 300,
+        'installments_count' => 4, // factor 1.2
+    ]);
+
+    $auto = Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Auto',
+        'principal_amount' => 2000,
+        'installment_amount' => 600,
+        'installments_count' => 4, // factor 1.2
+    ]);
+
+    // Closed debts must be excluded from the strategy
+    Debt::factory()->closed()->create([
+        'user_id' => $user->id,
+        'name' => 'Cerrada',
+        'principal_amount' => 500,
+        'installment_amount' => 250,
+        'installments_count' => 3, // factor 1.5
+    ]);
+
+    $response = $this->actingAs($user)->get(route('deudas.show', $tarjeta));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Deudas/Show')
+        ->has('strategy.avalanche', 2)
+        ->where('strategy.avalanche.0.id', $tarjeta->id)
+        ->where('strategy.avalanche.1.id', $auto->id)
+        ->where('strategy.avalanche.0.remaining', fn ($value) => (float) $value === 1200.0)
+        ->where('strategy.avalanche.0.factor', 1.2)
+        ->has('strategy.snowball', 2)
+        ->where('strategy.snowball.0.id', $tarjeta->id)
+        ->where('strategy.snowball.1.id', $auto->id)
+        // (1200 × 1.2 + 2400 × 1.2) / 3600 = 1.2
+        ->where('strategy.weighted_factor', 1.2));
+});
+
 // ─── Validation ───────────────────────────────────────────────────
 
 test('store validates payment_dates count matches installments_count', function () {

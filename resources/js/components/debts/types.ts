@@ -44,3 +44,16 @@ export interface DebtMovementData {
     notes: string | null;
 }
 
+export interface DebtStrategyItem {
+    id: number;
+    name: string;
+    remaining: number;
+    factor: number;
+    installment: number;
+}
+
+export interface DebtStrategyData {
+    avalanche: DebtStrategyItem[];
+    snowball: DebtStrategyItem[];
+    weighted_factor: number;
+}

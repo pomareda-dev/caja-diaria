@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateDebtRequest;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Movement;
+use App\Services\DebtStrategy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -88,6 +89,20 @@ class DebtController extends Controller
             ->map($mapMovement)
             ->values();
 
+        $activeDebts = Debt::where('user_id', $request->user()->id)
+            ->whereNull('closed_at')
+            ->get();
+
+        $strategy = new DebtStrategy(array_values(
+            $activeDebts->map(fn (Debt $activeDebt): array => [
+                'id' => $activeDebt->id,
+                'name' => $activeDebt->name,
+                'remaining' => (float) $activeDebt->remaining,
+                'factor' => $activeDebt->rate_factor,
+                'installment' => (float) $activeDebt->installment_amount,
+            ])->all(),
+        ));
+
         return Inertia::render('Deudas/Show', [
             'debt' => [
                 'id' => $debt->id,
@@ -107,6 +122,11 @@ class DebtController extends Controller
             ],
             'payment_history' => $paymentHistory->all(),
             'schedule' => $schedule->all(),
+            'strategy' => [
+                'avalanche' => $strategy->avalancheOrder(),
+                'snowball' => $strategy->snowballOrder(),
+                'weighted_factor' => $strategy->weightedFactor(),
+            ],
         ]);
     }
 
