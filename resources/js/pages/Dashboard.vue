@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import BalanceLineChart from '@/components/ui/chart/BalanceLineChart.vue';
 import { useCurrency } from '@/composables/useCurrency';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { dashboard } from '@/routes';
+import deudas from '@/routes/deudas';
 
 interface BudgetCategory {
     id: number;
@@ -16,6 +17,17 @@ interface BudgetCategory {
     color: string | null;
     monthly_limit: number;
     spent: number;
+}
+
+interface ActiveDebtSummary {
+    id: number;
+    name: string;
+    remaining: number;
+    paid_installments: number;
+    installments_count: number;
+    rate_factor: number;
+    next_date: string | null;
+    next_amount: number;
 }
 
 interface UpcomingMovement {
@@ -46,6 +58,7 @@ const props = defineProps<{
         difference: number;
         reconciled: boolean;
     };
+    debtsOverview: ActiveDebtSummary[];
     upcomingProjections: UpcomingMovement[];
     chartData: ChartPoint[];
     selectedMonth: string;
@@ -112,6 +125,17 @@ function progressPercentage(cat: BudgetCategory): number {
     }
 
     return (cat.spent / cat.monthly_limit) * 100;
+}
+
+function debtProgress(debt: ActiveDebtSummary): number {
+    if (debt.installments_count === 0) {
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.round((debt.paid_installments / debt.installments_count) * 100),
+    );
 }
 
 function progressColor(pct: number): string {
@@ -410,6 +434,85 @@ function formatDate(dateStr: string): string {
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Active Debts -->
+        <Card>
+            <CardHeader class="flex-row items-center justify-between space-y-0">
+                <CardTitle class="text-base">Deudas activas</CardTitle>
+                <Button variant="ghost" size="sm" as-child>
+                    <Link :href="deudas.index()">Ver todas</Link>
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <div v-if="debtsOverview.length > 0" class="space-y-4">
+                    <div
+                        v-for="debt in debtsOverview"
+                        :key="debt.id"
+                        class="space-y-1.5"
+                    >
+                        <div
+                            class="flex items-center justify-between gap-3 text-sm"
+                        >
+                            <Link
+                                :href="deudas.show.url(debt.id)"
+                                class="truncate font-medium transition-colors hover:underline"
+                            >
+                                {{ debt.name }}
+                            </Link>
+                            <span
+                                class="shrink-0 text-muted-foreground tabular-nums"
+                            >
+                                {{ debt.paid_installments }}/{{
+                                    debt.installments_count
+                                }}
+                                · {{ debtProgress(debt) }}%
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+                            >
+                                <div
+                                    role="progressbar"
+                                    :aria-valuenow="debtProgress(debt)"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    :aria-label="`Progreso de ${debt.name}: ${debtProgress(debt)}%`"
+                                    class="h-full rounded-full bg-primary transition-all duration-300"
+                                    :style="{
+                                        width: debtProgress(debt) + '%',
+                                    }"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center justify-between text-xs text-muted-foreground"
+                        >
+                            <span>
+                                Restante
+                                <span class="font-medium tabular-nums">
+                                    {{ format(debt.remaining) }}
+                                </span>
+                            </span>
+                            <span v-if="debt.next_date">
+                                Próxima cuota
+                                <span class="font-medium tabular-nums">
+                                    {{ formatDate(debt.next_date) }}
+                                    · {{ format(debt.next_amount) }}
+                                </span>
+                            </span>
+                            <span v-else>Sin cuotas pendientes</span>
+                        </div>
+                    </div>
+                </div>
+                <p
+                    v-else
+                    class="py-4 text-center text-sm text-muted-foreground"
+                >
+                    No hay deudas activas.
+                </p>
+            </CardContent>
+        </Card>
 
         <!-- Row: Upcoming Projections + Chart -->
         <div class="grid gap-6 lg:grid-cols-2">

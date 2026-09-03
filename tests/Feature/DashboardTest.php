@@ -2,6 +2,7 @@
 
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Debt;
 use App\Models\Movement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,6 +48,7 @@ test('dashboard has correct inertia props', function () {
         )
         ->has('upcomingProjections')
         ->has('chartData')
+        ->has('debtsOverview')
         ->has('selectedMonth')
         ->has('currentMonth')
     );
@@ -375,6 +377,91 @@ test('reconciliation excludes accounts marked as excluded', function () {
     );
 
     Carbon::setTestNow();
+});
+
+// ─── Active Debts ─────────────────────────────────────────────────
+
+test('debts overview includes active debts with progress and next installment', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
+
+    $debt = Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'installment_amount' => 250,
+        'installments_count' => 4,
+        'payment_dates' => [
+            '2026-07-20',
+            '2026-08-20',
+            '2026-09-20',
+            '2026-10-20',
+        ],
+    ]);
+
+    // One real installment paid
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'debt_id' => $debt->id,
+        'date' => '2026-07-10',
+        'amount' => -250,
+        'is_projected' => false,
+    ]);
+
+    // Closed debts must be excluded
+    Debt::factory()->closed()->create([
+        'user_id' => $user->id,
+        'name' => 'Deuda cerrada',
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('debtsOverview', 1)
+        ->where('debtsOverview.0.name', 'Préstamo personal')
+        ->where('debtsOverview.0.paid_installments', 1)
+        ->where('debtsOverview.0.installments_count', 4)
+        ->where('debtsOverview.0.remaining', fn ($value) => (float) $value === 750.0)
+        ->where('debtsOverview.0.rate_factor', fn ($value) => (float) $value === 1.0)
+        ->where('debtsOverview.0.next_date', '2026-07-20')
+        ->where('debtsOverview.0.next_amount', fn ($value) => (float) $value === 250.0)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('debts overview is empty when user has no active debts', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page->has('debtsOverview', 0));
+});
+
+test('debts overview only includes the current user debts', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $this->actingAs($user);
+
+    Debt::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Mi deuda',
+    ]);
+
+    Debt::factory()->create([
+        'user_id' => $other->id,
+        'name' => 'Deuda ajena',
+    ]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('debtsOverview', 1)
+        ->where('debtsOverview.0.name', 'Mi deuda')
+    );
 });
 
 // ─── Upcoming Projections ─────────────────────────────────────────
