@@ -1,17 +1,17 @@
-Desarrolla un dashboard de finanzas personales que permita a los usuarios visualizar y administrar toda su situación financiera desde una sola interfaz.
-Los usuarios deben poder consultar diferentes tipos de cuentas, como cuentas corrientes, ahorros, inversiones y deudas pendientes. El panel debe mostrar de forma clara los ingresos, gastos y transacciones recientes, facilitando el análisis del flujo de dinero y los hábitos de consumo.
-Incluye un sistema para crear y supervisar objetivos financieros, como alcanzar una meta de ahorro, aumentar una inversión o completar el pago de una deuda. Cada objetivo debe mostrar el progreso actual y cuánto falta para completarlo.
-Añade acciones básicas de administración financiera, como ingresar fondos y enviar o transferir dinero. La aplicación debe incluir herramientas relacionadas con presupuestos, seguimiento de cuentas, control de inversiones, gestión de deudas y planificación financiera.
-Prioriza un diseño moderno, limpio, intuitivo y fácil de utilizar. En esta primera versión no se necesita autenticación. El backend debe incluir datos de prueba realistas para que todas las secciones y funcionalidades del dashboard puedan visualizarse desde el inicio.
+# Planes Futuros
 
-## Qué incluye:
+## Deudas
 
-- Resumen (/) - KPIs de patrimonio neto, ingresos/gastos del mes y tasa de ahorro; gráfico de barras ingresos vs gastos (6 meses), donut de gasto por categoría y últimas transacciones.
+Agrega una página de deudas. En esta página se debe poder ver las deudas activas en forma de cards, el progreso de pago de cada una de ellas con una barra de progreso y un badge de la tasa. Cada deuda tendrá su vista individual donde se puede ver más información relevante como el historial de pagos, el cronograma de pagos, el total de la deuda, la tasa ponderada, y un comparativo del método avalancha vs el método bola de nieve.
+Cuando el usuario va a agregar/crear una deuda nueva debe ingresar el monto prestado, la fecha de desembolso, la cuota, las fechas de pago y el número de cuotas (el número de cuotas debe coincidir con la cantidad de fechas de pago). La fecha de desembolso y las fechas de pago se crean como movimientos (incluso proyectados) en sus respectivas fechas para verlos en la página de movimientos, con la categoría "Préstamo" (la cual ya existe).
+En el dashboard/tablero debe mostrarse un card resumido de la o las deudas actuales.
 
-- Inversiones (/inversiones) - valor del portafolio con P/L, gráfico de rendimiento a 12 meses, asignación por tipo de activo y tabla de posiciones (acciones, CDT, FIC, cripto, pensiones voluntarias).
+> Nota: Puedes sugerir más funciones o elementos relacionados con las deudas, o hacer las preguntas necesarias para lograr este objetivo.
 
-- Deudas (/deudas) - deuda total, cuota mensual, tasa ponderada, tarjeta por deuda con barra de progreso y badge de tasa, historial de pagos y comparación avalancha vs bola de nieve.
+## Planificación / Metas
 
-- Planificación (/planificacion) - presupuestos por categoría con barras de progreso, flujo de caja mensual y metas de ahorro con proyección de cumplimiento.
+Agrega una página de metas o planificaciones. En esta página se debe poder ver las metas activas en forma de cards y el progreso de cada una de ellas con una barra de progreso. En este caso no es necesario que cada meta tenga una página independiente de información, salvo tengas alguna sugerencia para ello.
+Para crear una meta el usuario solo necesita crear el monto total, y la fecha objetivo como opcional. Pero no se cómo se puede relacionar con los movimientos porque cada vez que se agrega un movimiento nuevo donde se asigna/separa un monto para la meta, este tiene que hacer referencia al item de la meta en particular.
+Otra cosa que no tengo en claro es si el dinero asignado a la meta se debe tratar como ingreso o gasto, porque en teoría ese dinero se está ahorrando/guardando en alguna de las cuentas del usuario, no se está ingresando más ni retirando dinero, pero a lo mucho hay que tener cuidado con gastar de más y que se toque ese dinero "ahorrado"
 
-- Transacciones (/transacciones) historial completo con filtros por mes, categoría y tipo.
+> Nota: Puedes sugerir más funciones o elementos relacionados con las deudas, o hacer las preguntas necesarias para lograr este objetivo.

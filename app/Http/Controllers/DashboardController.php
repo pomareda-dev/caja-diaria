@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Debt;
 use App\Models\Movement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -152,6 +153,33 @@ class DashboardController extends Controller
             ];
         }
 
+        // ─── Active debts summary (for the debts card) ───
+        $activeDebts = Debt::where('user_id', $userId)
+            ->whereNull('closed_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $debtsOverview = $activeDebts
+            ->map(function (Debt $debt) use ($today): array {
+                $nextInstallment = collect($debt->payment_dates)
+                    ->filter(fn (string $date): bool => $date > $today)
+                    ->sort()
+                    ->first();
+
+                return [
+                    'id' => $debt->id,
+                    'name' => $debt->name,
+                    'remaining' => (float) $debt->remaining,
+                    'paid_installments' => $debt->paid_installments,
+                    'installments_count' => $debt->installments_count,
+                    'rate_factor' => $debt->rate_factor,
+                    'next_date' => $nextInstallment,
+                    'next_amount' => (float) $debt->installment_amount,
+                ];
+            })
+            ->values()
+            ->all();
+
         return Inertia::render('Dashboard', [
             'cards' => [
                 'realBalance' => $realBalance,
@@ -166,6 +194,7 @@ class DashboardController extends Controller
                 'difference' => $difference,
                 'reconciled' => $reconciled,
             ],
+            'debtsOverview' => $debtsOverview,
             'upcomingProjections' => $upcoming->values()->all(),
             'chartData' => $dailyBalances,
             'selectedMonth' => $selectedMonth->format('Y-m'),
