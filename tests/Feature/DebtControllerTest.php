@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Movement;
 use App\Models\User;
@@ -292,8 +293,22 @@ test('store validates installment_amount is greater than zero', function () {
 
 // ─── Store ────────────────────────────────────────────────────────
 
+function configureDebtCategory(User $user): Category
+{
+    $category = Category::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamos',
+        'kind' => 'expense',
+    ]);
+
+    $user->update(['settings' => ['debt_category_id' => $category->id]]);
+
+    return $category;
+}
+
 test('store creates debt with disbursement and installment movements', function () {
     $user = User::factory()->create();
+    $category = configureDebtCategory($user);
 
     $response = $this->actingAs($user)->post(route('deudas.store'), [
         'name' => 'Préstamo personal',
@@ -319,6 +334,10 @@ test('store creates debt with disbursement and installment movements', function 
     // 1 disbursement + 4 installments = 5 movements
     expect($debt->movements)->toHaveCount(5);
 
+    // Every movement carries the configured category
+    expect($debt->movements->pluck('category_id')->unique()->all())
+        ->toBe([$category->id]);
+
     // Disbursement movement
     $disbursement = $debt->movements->firstWhere('amount', '1000.00');
     expect($disbursement)->not->toBeNull();
@@ -329,8 +348,55 @@ test('store creates debt with disbursement and installment movements', function 
     expect($installments)->toHaveCount(4);
 });
 
+test('store fails when no debt category is configured', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('deudas.store'), [
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'disbursement_date' => now()->subMonth()->toDateString(),
+        'installment_amount' => 250,
+        'installments_count' => 4,
+        'payment_dates' => [
+            now()->subMonth()->toDateString(),
+            now()->toDateString(),
+            now()->addMonth()->toDateString(),
+            now()->addMonths(2)->toDateString(),
+        ],
+    ]);
+
+    $response->assertSessionHasErrors('debt_category');
+    expect(Debt::count())->toBe(0);
+    expect(Movement::count())->toBe(0);
+});
+
+test('store ignores a configured category that does not belong to the user', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherCategory = Category::factory()->create(['user_id' => $otherUser->id]);
+
+    $user->update(['settings' => ['debt_category_id' => $otherCategory->id]]);
+
+    $this->actingAs($user)->post(route('deudas.store'), [
+        'name' => 'Préstamo personal',
+        'principal_amount' => 1000,
+        'disbursement_date' => now()->subMonth()->toDateString(),
+        'installment_amount' => 250,
+        'installments_count' => 4,
+        'payment_dates' => [
+            now()->subMonth()->toDateString(),
+            now()->toDateString(),
+            now()->addMonth()->toDateString(),
+            now()->addMonths(2)->toDateString(),
+        ],
+    ])->assertSessionHasErrors('debt_category');
+
+    expect(Debt::count())->toBe(0);
+});
+
 test('store marks past movements as non-projected and future as projected', function () {
     $user = User::factory()->create();
+    configureDebtCategory($user);
 
     $this->actingAs($user)->post(route('deudas.store'), [
         'name' => 'Préstamo personal',
@@ -360,6 +426,7 @@ test('store marks past movements as non-projected and future as projected', func
 
 test('update regenerates projected movements and preserves real ones', function () {
     $user = User::factory()->create();
+    $category = configureDebtCategory($user);
 
     // Create a debt with 4 installments (2 past, 2 future)
     $debt = Debt::factory()->create([
@@ -425,12 +492,15 @@ test('update regenerates projected movements and preserves real ones', function 
     $projectedMovements = $debt->movements()->where('is_projected', true)->get();
     expect($projectedMovements)->toHaveCount(2);
     expect($projectedMovements->first()->amount)->toBe('-300.00');
+    expect($projectedMovements->pluck('category_id')->unique()->all())
+        ->toBe([$category->id]);
 });
 
 // ─── Payoff ───────────────────────────────────────────────────────
 
 test('payoff closes debt and deletes projected movements', function () {
     $user = User::factory()->create();
+    $category = configureDebtCategory($user);
 
     $debt = Debt::factory()->create([
         'user_id' => $user->id,
@@ -473,6 +543,7 @@ test('payoff closes debt and deletes projected movements', function () {
     expect($payoffMovement)->not->toBeNull();
     expect($payoffMovement->amount)->toBe('-500.00');
     expect($payoffMovement->is_projected)->toBeFalse();
+    expect($payoffMovement->category_id)->toBe($category->id);
 });
 
 test('payoff validates amount is greater than zero', function () {
