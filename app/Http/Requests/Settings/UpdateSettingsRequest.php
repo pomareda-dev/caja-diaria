@@ -4,6 +4,7 @@ namespace App\Http\Requests\Settings;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -28,6 +29,7 @@ class UpdateSettingsRequest extends FormRequest
             'start_section' => ['nullable', 'in:dashboard,movements,categories,accounts,recurring'],
             'projection_horizon' => ['nullable', 'integer', 'between:1,24'],
             'avatar_path' => ['nullable', 'string', 'max:255'],
+            'debt_category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id))],
         ];
     }
 }

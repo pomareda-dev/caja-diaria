@@ -27,7 +27,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::inertia('settings/appearance', 'settings/Appearance')->name('appearance.edit');
 
-    Route::inertia('settings/preferences', 'settings/Preferences')->name('preferences.edit');
+    Route::get('settings/preferences', [PreferencesController::class, 'edit'])
+        ->name('preferences.edit');
 
     Route::post('settings/profile-photo', [UserProfilePhotoController::class, 'store'])
         ->name('settings.profile-photo.store');
