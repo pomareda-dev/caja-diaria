@@ -41,7 +41,9 @@ class ProjectionService
     }
 
     /**
-     * Delete all existing source=recurring movements for the user and regenerate.
+     * Delete all existing projected source=recurring movements for the user
+     * and regenerate. Realized recurring movements (is_projected=false) are
+     * preserved — they represent actual money movement and must never be lost.
      *
      * @return int Number of movements generated.
      */
@@ -57,6 +59,7 @@ class ProjectionService
         DB::transaction(function () use ($userId, $horizonMonths, &$generated): void {
             Movement::where('user_id', $userId)
                 ->where('source', 'recurring')
+                ->where('is_projected', true)
                 ->delete();
 
             $generated = $this->generateForUser($userId, $horizonMonths);
