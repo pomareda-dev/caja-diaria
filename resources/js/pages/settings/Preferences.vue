@@ -26,13 +26,15 @@ import { Spinner } from '@/components/ui/spinner';
 import { themeKey, setTheme } from '@/composables/useAppearance';
 import { getInitials } from '@/composables/useInitials';
 import { useSettings } from '@/composables/useSettings';
+import profilePhoto from '@/routes/config/profile-photo';
+import { edit } from '@/routes/preferences';
 
 defineOptions({
     layout: {
         breadcrumbs: [
             {
                 title: 'Preferencias',
-                href: '/config/preferencias',
+                href: edit(),
             },
         ],
     },
@@ -184,7 +186,7 @@ async function uploadPhoto(file: File) {
         const formData = new FormData();
         formData.append('photo', file);
 
-        const response = await fetch('/settings/profile-photo', {
+        const response = await fetch(profilePhoto.store.url(), {
             method: 'POST',
             headers: {
                 Accept: 'application/json',

@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
+import settings from '@/routes/settings';
 import type { Appearance, ResolvedAppearance } from '@/types';
 
 export type { Appearance, ResolvedAppearance };
@@ -98,7 +99,7 @@ export function setTheme(key: string): void {
     const csrfToken = getCsrfToken();
 
     if (csrfToken) {
-        fetch('/settings', {
+        fetch(settings.update.url(), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -207,7 +208,9 @@ export function initializeTheme(): void {
             const pageTheme = pageData?.props?.auth?.user?.settings?.theme;
 
             if (pageTheme && typeof pageTheme === 'string') {
-                initialTheme = (VALID_THEMES as readonly string[]).includes(pageTheme)
+                initialTheme = (VALID_THEMES as readonly string[]).includes(
+                    pageTheme,
+                )
                     ? pageTheme
                     : 'default';
             }
