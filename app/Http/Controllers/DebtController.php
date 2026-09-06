@@ -8,11 +8,13 @@ use App\Http\Requests\UpdateDebtRequest;
 use App\Models\Category;
 use App\Models\Debt;
 use App\Models\Movement;
+use App\Models\User;
 use App\Services\DebtStrategy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -131,6 +133,24 @@ class DebtController extends Controller
     }
 
     /**
+     * Resolve the user's configured category for loan movements.
+     * Returns null when the setting is missing or points to a category
+     * that no longer belongs to the user.
+     */
+    private static function resolveLoanCategory(User $user): ?Category
+    {
+        $categoryId = $user->settings['debt_category_id'] ?? null;
+
+        if (! $categoryId) {
+            return null;
+        }
+
+        return Category::where('user_id', $user->id)
+            ->where('id', $categoryId)
+            ->first();
+    }
+
+    /**
      * Store a newly created debt with its movements in a transaction.
      */
     public function store(StoreDebtRequest $request): RedirectResponse
@@ -138,7 +158,15 @@ class DebtController extends Controller
         $validated = $request->validated();
         $user = $request->user();
 
-        DB::transaction(function () use ($validated, $user) {
+        $loanCategory = self::resolveLoanCategory($user);
+
+        if ($loanCategory === null) {
+            throw ValidationException::withMessages([
+                'debt_category' => 'Configura una categoría para tus préstamos en Preferencias antes de crear una deuda.',
+            ]);
+        }
+
+        DB::transaction(function () use ($validated, $user, $loanCategory) {
             // Create the debt
             $debt = $user->debts()->create([
                 'name' => $validated['name'],
@@ -149,11 +177,6 @@ class DebtController extends Controller
                 'payment_dates' => $validated['payment_dates'],
             ]);
 
-            // Find or create "Préstamo" category
-            $loanCategory = Category::where('user_id', $user->id)
-                ->where('name', 'Préstamo')
-                ->first();
-
             // Create disbursement movement (+principal)
             $disbursementDate = Carbon::parse($validated['disbursement_date']);
             $isProjected = $disbursementDate->isFuture();
@@ -161,7 +184,7 @@ class DebtController extends Controller
             $user->movements()->create([
                 'date' => $validated['disbursement_date'],
                 'description' => "Desembolso {$debt->name}",
-                'category_id' => $loanCategory?->id,
+                'category_id' => $loanCategory->id,
                 'amount' => $validated['principal_amount'],
                 'source' => 'manual',
                 'debt_id' => $debt->id,
@@ -178,7 +201,7 @@ class DebtController extends Controller
                 $user->movements()->create([
                     'date' => $paymentDate,
                     'description' => "Cuota {$debt->name} ({$installmentNumber}/{$validated['installments_count']})",
-                    'category_id' => $loanCategory?->id,
+                    'category_id' => $loanCategory->id,
                     'amount' => -$validated['installment_amount'],
                     'source' => 'manual',
                     'debt_id' => $debt->id,
@@ -215,10 +238,7 @@ class DebtController extends Controller
             // Delete only projected movements linked to this debt
             $debt->movements()->where('is_projected', true)->delete();
 
-            // Find or create "Préstamo" category
-            $loanCategory = Category::where('user_id', $user->id)
-                ->where('name', 'Préstamo')
-                ->first();
+            $loanCategory = self::resolveLoanCategory($user);
 
             // Regenerate projected movements for disbursement if future
             $disbursementDate = Carbon::parse($debt->disbursement_date);
@@ -280,10 +300,7 @@ class DebtController extends Controller
         $user = $request->user();
 
         DB::transaction(function () use ($validated, $debt, $user) {
-            // Find or create "Préstamo" category
-            $loanCategory = Category::where('user_id', $user->id)
-                ->where('name', 'Préstamo')
-                ->first();
+            $loanCategory = self::resolveLoanCategory($user);
 
             // Create payoff movement
             $user->movements()->create([

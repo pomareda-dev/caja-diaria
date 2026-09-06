@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Plus, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import DebtCard from '@/components/debts/DebtCard.vue';
 import DebtDialog from '@/components/debts/DebtDialog.vue';
 import PayoffDialog from '@/components/debts/PayoffDialog.vue';
 import type { DebtData } from '@/components/debts/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -40,6 +36,13 @@ defineOptions({
 
 const activeDebts = computed(() => props.debts.filter((d) => d.is_active));
 const closedDebts = computed(() => props.debts.filter((d) => !d.is_active));
+
+const debtCategoryConfigured = computed(() => {
+    const settings = (usePage().props.auth.user as Record<string, unknown>)
+        ?.settings as Record<string, unknown> | null | undefined;
+
+    return Boolean(settings?.debt_category_id);
+});
 
 // --- Dialog state ---
 const showDebtDialog = ref(false);
@@ -107,10 +110,32 @@ function executeDelete() {
             </Button>
         </div>
 
+        <!-- Category alert -->
+        <Alert v-if="!debtCategoryConfigured" variant="default">
+            <TriangleAlert class="size-4" />
+            <AlertTitle>Sin categoría configurada</AlertTitle>
+            <AlertDescription
+                class="flex flex-wrap items-center justify-between gap-3"
+            >
+                <span>
+                    Los movimientos de tus préstamos (desembolso, cuotas y
+                    liquidación) se guardan sin categoría. Elegí una antes de
+                    crear deudas para identificarlos en tus reportes.
+                </span>
+                <Button as-child variant="outline" size="sm">
+                    <Link href="/settings/preferences">
+                        Configurar categoría
+                    </Link>
+                </Button>
+            </AlertDescription>
+        </Alert>
+
         <!-- Empty state -->
         <Card v-if="debts.length === 0">
             <CardHeader>
-                <CardTitle class="text-base">No hay deudas registradas</CardTitle>
+                <CardTitle class="text-base"
+                    >No hay deudas registradas</CardTitle
+                >
             </CardHeader>
             <CardContent class="flex flex-col items-center gap-3">
                 <p class="text-sm text-muted-foreground">
@@ -176,8 +201,8 @@ function executeDelete() {
                     <br />
                     <strong>{{ deleteTarget?.name }}</strong>
                     <br />
-                    Se eliminarán también sus cuotas proyectadas. Esta acción
-                    no se puede deshacer.
+                    Se eliminarán también sus cuotas proyectadas. Esta acción no
+                    se puede deshacer.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter>

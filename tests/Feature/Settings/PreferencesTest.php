@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -94,6 +95,61 @@ test('settings update merges with existing settings', function () {
 
     expect($user->settings['theme'])->toBe('claude');
     expect($user->settings['density'])->toBe('compact');
+});
+
+test('settings update persists the configured debt category', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->put(route('settings.update'), ['debt_category_id' => $category->id])
+        ->assertNoContent();
+
+    $user->refresh();
+
+    expect($user->settings['debt_category_id'])->toBe($category->id);
+});
+
+test('settings update rejects a debt category from another user', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherCategory = Category::factory()->create(['user_id' => $otherUser->id]);
+
+    $this->actingAs($user)
+        ->put(route('settings.update'), ['debt_category_id' => $otherCategory->id])
+        ->assertSessionHasErrors('debt_category_id');
+});
+
+test('settings update accepts null to unset the debt category', function () {
+    $user = User::factory()->create([
+        'settings' => ['debt_category_id' => null],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('settings.update'), ['debt_category_id' => null])
+        ->assertNoContent();
+
+    $user->refresh();
+
+    expect($user->settings)->toHaveKey('debt_category_id');
+    expect($user->settings['debt_category_id'])->toBeNull();
+});
+
+test('preferences page renders the users categories for the debt picker', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Préstamos',
+        'kind' => 'expense',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('preferences.edit'));
+
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('settings/Preferences')
+        ->has('categories', 1)
+        ->where('categories.0.id', $category->id)
+        ->where('categories.0.name', 'Préstamos'));
 });
 
 // ─── Settings: Profile Photo Upload ────────────────────────────────

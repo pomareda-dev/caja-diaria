@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
-import { watch } from 'vue';
+import { useForm, Link } from '@inertiajs/vue3';
+import { TriangleAlert } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import type { DebtData } from '@/components/debts/types';
 import InputError from '@/components/InputError.vue';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useSettings } from '@/composables/useSettings';
 import deudas from '@/routes/deudas';
 
 const props = defineProps<{
@@ -25,6 +28,14 @@ const emit = defineEmits<{
     (e: 'update:open', value: boolean): void;
     (e: 'saved'): void;
 }>();
+
+const { settings } = useSettings();
+
+const debtCategoryConfigured = computed(
+    () => settings.debt_category_id !== null,
+);
+
+const categoryError = ref('');
 
 const form = useForm({
     name: '',
@@ -99,6 +110,7 @@ watch(
 
         form.reset();
         form.clearErrors();
+        categoryError.value = '';
 
         if (props.debt) {
             form.name = props.debt.name;
@@ -120,6 +132,13 @@ function closeDialog(): void {
 }
 
 function submit(): void {
+    if (!isEditing() && !debtCategoryConfigured.value) {
+        categoryError.value =
+            'Configura una categoría para tus préstamos antes de crear la deuda.';
+
+        return;
+    }
+
     form.transform((data) => ({
         ...data,
         principal_amount: Number(data.principal_amount),
@@ -145,9 +164,7 @@ function submit(): void {
 
 <template>
     <Dialog :open="open" @update:open="closeDialog">
-        <DialogContent
-            class="max-h-[85vh] overflow-y-auto sm:max-w-[500px]"
-        >
+        <DialogContent class="max-h-[85vh] overflow-y-auto sm:max-w-[500px]">
             <DialogHeader>
                 <DialogTitle>
                     {{ isEditing() ? 'Editar deuda' : 'Nueva deuda' }}
@@ -162,6 +179,26 @@ function submit(): void {
             </DialogHeader>
 
             <form @submit.prevent="submit" class="flex flex-col gap-4">
+                <!-- Category warning (create only) -->
+                <Alert
+                    v-if="!isEditing() && !debtCategoryConfigured"
+                    variant="default"
+                >
+                    <TriangleAlert class="size-4" />
+                    <AlertTitle>Sin categoría configurada</AlertTitle>
+                    <AlertDescription>
+                        Elegí la categoría para los movimientos de tus préstamos
+                        en Preferencias antes de crear la deuda.
+                        <Link
+                            href="/settings/preferences"
+                            class="font-medium underline underline-offset-4"
+                        >
+                            Ir a Preferencias
+                        </Link>
+                    </AlertDescription>
+                </Alert>
+                <InputError :message="categoryError" />
+
                 <!-- Nombre -->
                 <div class="grid gap-2">
                     <Label for="name">Nombre</Label>
@@ -265,7 +302,11 @@ function submit(): void {
                 </div>
 
                 <DialogFooter>
-                    <Button type="button" variant="outline" @click="closeDialog">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="closeDialog"
+                    >
                         Cancelar
                     </Button>
                     <Button type="submit" :disabled="form.processing">

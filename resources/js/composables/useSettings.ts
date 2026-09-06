@@ -1,5 +1,5 @@
-import { computed, reactive, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { computed, reactive, watch } from 'vue';
 import { toast } from 'vue-sonner';
 
 /**
@@ -7,11 +7,21 @@ import { toast } from 'vue-sonner';
  * All keys are optional — defaults are applied in the composable.
  */
 export interface UserSettings {
-    theme: 'default' | 'bold-tech' | 'claude' | 'pastel-dreams' | 'quantum-rose' | 'sunny-sprout' | 'twitter' | 'violet-bloom';
+    theme:
+        | 'default'
+        | 'bold-tech'
+        | 'claude'
+        | 'pastel-dreams'
+        | 'quantum-rose'
+        | 'sunny-sprout'
+        | 'twitter'
+        | 'violet-bloom';
     density: 'compact' | 'comfortable';
-    start_section: 'dashboard' | 'movements' | 'categories' | 'accounts' | 'recurring';
+    start_section:
+        'dashboard' | 'movements' | 'categories' | 'accounts' | 'recurring';
     projection_horizon: number;
     avatar_path: string | null;
+    debt_category_id: number | null;
 }
 
 const defaults: UserSettings = {
@@ -20,6 +30,7 @@ const defaults: UserSettings = {
     start_section: 'dashboard',
     projection_horizon: 12,
     avatar_path: null,
+    debt_category_id: null,
 };
 
 /**
@@ -42,7 +53,9 @@ function getCsrfToken(): string | null {
 /**
  * Merge the server raw settings object into our typed defaults.
  */
-function hydrateSettings(raw: Record<string, unknown> | null | undefined): UserSettings {
+function hydrateSettings(
+    raw: Record<string, unknown> | null | undefined,
+): UserSettings {
     return { ...defaults, ...raw } as UserSettings;
 }
 
@@ -87,7 +100,9 @@ const densityClassMap: Record<UserSettings['density'], DensityClassMap> = {
 
 export function useSettings() {
     const rawSettings = computed(
-        () => (usePage().props.auth.user as Record<string, unknown>)?.settings as Record<string, unknown> | null | undefined,
+        () =>
+            (usePage().props.auth.user as Record<string, unknown>)?.settings as
+                Record<string, unknown> | null | undefined,
     );
 
     const settings = reactive<UserSettings>(hydrateSettings(rawSettings.value));
@@ -103,7 +118,9 @@ export function useSettings() {
     /**
      * Persist partial settings to the server and update local state on success.
      */
-    async function updateSettings(partial: Partial<UserSettings>): Promise<void> {
+    async function updateSettings(
+        partial: Partial<UserSettings>,
+    ): Promise<void> {
         const csrfToken = getCsrfToken();
 
         if (!csrfToken) {
@@ -128,14 +145,17 @@ export function useSettings() {
             // Update local reactive state immediately
             (Object.keys(partial) as (keyof UserSettings)[]).forEach((key) => {
                 if (key in settings) {
-                    (settings as Record<string, unknown>)[key] = partial[key] as unknown;
+                    (settings as Record<string, unknown>)[key] = partial[
+                        key
+                    ] as unknown;
                 }
             });
 
             // Sync back to Inertia shared props so other components see the change
             const page = usePage();
             const user = page.props.auth.user as Record<string, unknown>;
-            const currentSettings = (user.settings as Record<string, unknown>) ?? {};
+            const currentSettings =
+                (user.settings as Record<string, unknown>) ?? {};
             user.settings = { ...currentSettings, ...partial };
         } catch {
             toast.error('No se pudieron guardar las preferencias');
@@ -145,7 +165,9 @@ export function useSettings() {
     /**
      * Computed density class map that updates when density changes.
      */
-    const densityClass = computed<DensityClassMap>(() => densityClassMap[settings.density] ?? densityClassMap.comfortable);
+    const densityClass = computed<DensityClassMap>(
+        () => densityClassMap[settings.density] ?? densityClassMap.comfortable,
+    );
 
     return {
         settings,
