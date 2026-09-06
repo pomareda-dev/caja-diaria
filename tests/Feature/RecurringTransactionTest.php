@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Movement;
 use App\Models\RecurringTransaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 
 uses(RefreshDatabase::class);
 
@@ -181,6 +183,61 @@ test('user cannot delete another users recurring template', function () {
 
     $response->assertForbidden();
     $this->assertModelExists($template);
+});
+
+test('deleting a template removes its projected movements but preserves realized ones', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-09-05'));
+
+    $template = RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Falabella',
+        'amount' => -300.96,
+        'day_of_month' => 5,
+        'start_month' => '2026-07-01',
+        'end_month' => null,
+        'active' => true,
+    ]);
+
+    // Realized movement — must survive the template deletion
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-08-05',
+        'description' => 'Falabella',
+        'amount' => -300.96,
+        'source' => 'recurring',
+        'recurring_id' => $template->id,
+        'is_projected' => false,
+    ]);
+
+    // Projected movement — must be removed with the template
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-10-05',
+        'description' => 'Falabella',
+        'amount' => -300.96,
+        'source' => 'recurring',
+        'recurring_id' => $template->id,
+        'is_projected' => true,
+    ]);
+
+    $response = $this->delete(route('recurrentes.destroy', $template));
+
+    $response->assertRedirect();
+    $this->assertModelMissing($template);
+
+    expect(Movement::where('user_id', $user->id)
+        ->where('description', 'Falabella')
+        ->where('is_projected', false)
+        ->count())->toBe(1);
+    expect(Movement::where('user_id', $user->id)
+        ->where('description', 'Falabella')
+        ->where('is_projected', true)
+        ->count())->toBe(0);
+
+    Carbon::setTestNow();
 });
 
 // ─── Validation ───────────────────────────────────────────────────

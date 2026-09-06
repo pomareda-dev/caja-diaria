@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/vue3';
 import { computed, reactive, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import { update as updateSettingsRoute } from '@/routes/settings';
 
 /**
  * Shape of the `settings` JSON column on the User model.
@@ -128,7 +129,7 @@ export function useSettings() {
         }
 
         try {
-            const response = await fetch('/settings', {
+            const response = await fetch(updateSettingsRoute.url(), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

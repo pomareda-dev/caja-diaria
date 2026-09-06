@@ -219,6 +219,125 @@ test('regenerate deletes existing and recreates', function () {
     Carbon::setTestNow();
 });
 
+test('regenerate preserves realized recurring movements and rebuilds only projections', function () {
+    $user = User::factory()->create();
+    $service = app(ProjectionService::class);
+
+    Carbon::setTestNow(Carbon::parse('2026-09-05'));
+
+    // Realized recurring movement (already past, marked real) — must survive regeneration
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-08-28',
+        'description' => 'Sueldo',
+        'amount' => 4175.00,
+        'source' => 'recurring',
+        'is_projected' => false,
+    ]);
+
+    RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Sueldo',
+        'amount' => 4175.00,
+        'day_of_month' => 28,
+        'start_month' => '2026-07-01',
+        'end_month' => null,
+        'active' => true,
+    ]);
+
+    $service->generateForUser($user->id);
+
+    $projectedBefore = Movement::where('user_id', $user->id)
+        ->where('source', 'recurring')
+        ->where('is_projected', true)
+        ->count();
+    expect($projectedBefore)->toBeGreaterThan(0);
+
+    $balanceBefore = (float) Movement::realBalance($user->id);
+
+    $service->regenerateForUser($user->id);
+
+    // Realized recurring movement is preserved
+    expect(Movement::where('user_id', $user->id)
+        ->where('source', 'recurring')
+        ->where('is_projected', false)
+        ->count())->toBe(1);
+
+    // Real balance unchanged
+    expect((float) Movement::realBalance($user->id))->toBe($balanceBefore);
+
+    // Future projections rebuilt
+    expect(Movement::where('user_id', $user->id)
+        ->where('source', 'recurring')
+        ->where('is_projected', true)
+        ->count())->toBe($projectedBefore);
+
+    Carbon::setTestNow();
+});
+
+test('deleting a template and regenerating preserves realized movements of untouched templates', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Carbon::setTestNow(Carbon::parse('2026-09-05'));
+
+    $sueldo = RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Sueldo',
+        'amount' => 4175.00,
+        'day_of_month' => 28,
+        'start_month' => '2026-07-01',
+        'end_month' => null,
+        'active' => true,
+    ]);
+
+    RecurringTransaction::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Huancayo',
+        'amount' => -820.00,
+        'day_of_month' => 15,
+        'start_month' => '2026-07-01',
+        'end_month' => '2027-04-01',
+        'active' => true,
+    ]);
+
+    // Realized Sueldo movement (real history) linked to the Sueldo template
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'date' => '2026-08-28',
+        'description' => 'Sueldo',
+        'amount' => 4175.00,
+        'source' => 'recurring',
+        'recurring_id' => $sueldo->id,
+        'is_projected' => false,
+    ]);
+
+    $this->post(route('recurrentes.regenerate'));
+
+    expect(Movement::where('description', 'Huancayo')->where('is_projected', true)->count())->toBeGreaterThan(0);
+
+    // User flow: delete Huancayo template, then regenerate projections
+    $huancayo = RecurringTransaction::where('name', 'Huancayo')->firstOrFail();
+    $this->delete(route('recurrentes.destroy', $huancayo));
+    $this->post(route('recurrentes.regenerate'));
+
+    // Realized Sueldo movement preserved and real balance unchanged
+    expect(Movement::where('user_id', $user->id)
+        ->where('source', 'recurring')
+        ->where('is_projected', false)
+        ->count())->toBe(1);
+    expect((float) Movement::realBalance($user->id))->toBe(4175.0);
+
+    // Huancayo projections are gone, Sueldo projections rebuilt
+    expect(Movement::where('description', 'Huancayo')->count())->toBe(0);
+    expect(Movement::where('user_id', $user->id)
+        ->where('source', 'recurring')
+        ->where('is_projected', true)
+        ->count())->toBeGreaterThan(0);
+
+    Carbon::setTestNow();
+});
+
 // ─── Only active templates ────────────────────────────────────────
 
 test('generate only processes active templates', function () {

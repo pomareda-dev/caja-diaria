@@ -18,6 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import deudas from '@/routes/deudas';
+import preferences from '@/routes/preferences';
 
 const props = defineProps<{
     debts: DebtData[];
@@ -123,7 +124,7 @@ function executeDelete() {
                     crear deudas para identificarlos en tus reportes.
                 </span>
                 <Button as-child variant="outline" size="sm">
-                    <Link href="/settings/preferences">
+                    <Link :href="preferences.edit()">
                         Configurar categoría
                     </Link>
                 </Button>

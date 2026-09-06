@@ -86,6 +86,12 @@ class RecurringTransactionController extends Controller
             abort(403);
         }
 
+        // Remove the template's projected movements; realized movements
+        // (is_projected=false) are real history and must be preserved.
+        $recurringTransaction->movements()
+            ->where('is_projected', true)
+            ->delete();
+
         $recurringTransaction->delete();
 
         Inertia::flash('toast', [

@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSettings } from '@/composables/useSettings';
 import deudas from '@/routes/deudas';
+import preferences from '@/routes/preferences';
 
 const props = defineProps<{
     open: boolean;
@@ -190,7 +191,7 @@ function submit(): void {
                         Elegí la categoría para los movimientos de tus préstamos
                         en Preferencias antes de crear la deuda.
                         <Link
-                            href="/settings/preferences"
+                            :href="preferences.edit()"
                             class="font-medium underline underline-offset-4"
                         >
                             Ir a Preferencias
