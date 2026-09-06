@@ -31,8 +31,8 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Preferences',
-                href: '/settings/preferences',
+                title: 'Preferencias',
+                href: '/config/preferencias',
             },
         ],
     },
@@ -53,7 +53,7 @@ const props = defineProps<{
 
 // --- Palette ---
 const palettes: { key: string; label: string }[] = [
-    { key: 'default', label: 'Default' },
+    { key: 'default', label: 'Por defecto' },
     { key: 'bold-tech', label: 'Bold Tech' },
     { key: 'claude', label: 'Claude' },
     { key: 'pastel-dreams', label: 'Pastel Dreams' },
@@ -241,14 +241,14 @@ function getCsrfToken(): string | null {
 </script>
 
 <template>
-    <Head title="Preferences" />
+    <Head title="Preferencias" />
 
-    <h1 class="sr-only">Preferences</h1>
+    <h1 class="sr-only">Preferencias</h1>
 
     <div class="space-y-6">
         <Heading
             variant="small"
-            title="Preferences"
+            title="Preferencias"
             description="Personaliza la apariencia y el comportamiento de la aplicación"
         />
 
