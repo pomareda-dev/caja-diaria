@@ -1,49 +1,46 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from '@lucide/vue';
-import { ref, computed, watch } from 'vue';
+import type { CategoryData, MovementData } from '@/components/movements/MovementDialog.vue';
 import MovementDialog from '@/components/movements/MovementDialog.vue';
-import type {
-    MovementData,
-    CategoryData,
-} from '@/components/movements/MovementDialog.vue';
-import ResponsiveTable from '@/components/ResponsiveTable.vue';
 import type { ResponsiveColumn } from '@/components/ResponsiveTable.vue';
+import ResponsiveTable from '@/components/ResponsiveTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { useCurrency } from '@/composables/useCurrency';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { useSettings } from '@/composables/useSettings';
 import movimientos from '@/routes/movimientos';
+import { Head, router } from '@inertiajs/vue3';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
-    realMovements: MovementData[];
-    projectedMovements: MovementData[];
-    categories: CategoryData[];
-    selectedMonth: string;
-    openingBalance: number;
-    projectedOpeningBalance: number;
-    currentMonth: string;
+  realMovements: MovementData[];
+  projectedMovements: MovementData[];
+  categories: CategoryData[];
+  selectedMonth: string;
+  openingBalance: number;
+  projectedOpeningBalance: number;
+  currentMonth: string;
 }>();
 
 defineOptions({
-    layout: {
-        breadcrumbs: [
-            {
-                title: 'Movimientos',
-                href: movimientos.index(),
-            },
-        ],
-    },
+  layout: {
+    breadcrumbs: [
+      {
+        title: 'Movimientos',
+        href: movimientos.index(),
+      },
+    ],
+  },
 });
 
 const { format, formatSigned } = useCurrency();
@@ -51,21 +48,19 @@ const { densityClass } = useSettings();
 
 // --- Month navigation ---
 const selectedDate = computed(() => {
-    const [year, month] = props.selectedMonth.split('-').map(Number);
+  const [year, month] = props.selectedMonth.split('-').map(Number);
 
-    return new Date(year, month - 1, 1);
+  return new Date(year, month - 1, 1);
 });
 
 const monthLabel = computed(() => {
-    return selectedDate.value.toLocaleDateString('es-PE', {
-        month: 'long',
-        year: 'numeric',
-    });
+  return selectedDate.value.toLocaleDateString('es-PE', {
+    month: 'long',
+    year: 'numeric',
+  });
 });
 
-const isCurrentMonth = computed(
-    () => props.selectedMonth === props.currentMonth,
-);
+const isCurrentMonth = computed(() => props.selectedMonth === props.currentMonth);
 
 // Past month (before current): only "Actuales" shown — projected are future.
 const isPastMonth = computed(() => props.selectedMonth < props.currentMonth);
@@ -74,19 +69,19 @@ const isPastMonth = computed(() => props.selectedMonth < props.currentMonth);
 const isFutureMonth = computed(() => props.selectedMonth > props.currentMonth);
 
 function navigateMonth(delta: number) {
-    const date = new Date(selectedDate.value);
-    date.setMonth(date.getMonth() + delta);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    router.visit(`${movimientos.index.url()}?month=${year}-${month}`, {
-        preserveScroll: true,
-    });
+  const date = new Date(selectedDate.value);
+  date.setMonth(date.getMonth() + delta);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  router.visit(`${movimientos.index.url()}?month=${year}-${month}`, {
+    preserveScroll: true,
+  });
 }
 
 function goToToday() {
-    router.visit(movimientos.index.url(), {
-        preserveScroll: true,
-    });
+  router.visit(movimientos.index.url(), {
+    preserveScroll: true,
+  });
 }
 
 // --- Dialog state ---
@@ -96,65 +91,58 @@ const deleteTarget = ref<MovementData | null>(null);
 const showDeleteDialog = ref(false);
 
 function openCreate() {
-    editingMovement.value = null;
-    showCreateDialog.value = true;
+  editingMovement.value = null;
+  showCreateDialog.value = true;
 }
 
 // --- Keyboard shortcuts ---
 useKeyboardShortcuts(
-    [
-        { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
-        { key: 'ArrowRight', handler: () => navigateMonth(1) },
-        { key: 'n', handler: () => openCreate(), ignoreShift: true },
-    ],
-    {
-        isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
-    },
+  [
+    { key: 'ArrowLeft', handler: () => navigateMonth(-1) },
+    { key: 'ArrowRight', handler: () => navigateMonth(1) },
+    { key: 'n', handler: () => openCreate(), ignoreShift: true },
+  ],
+  {
+    isDialogOpen: () => showCreateDialog.value || showDeleteDialog.value,
+  }
 );
 
 function openEdit(movement: MovementData) {
-    editingMovement.value = movement;
-    showCreateDialog.value = true;
+  editingMovement.value = movement;
+  showCreateDialog.value = true;
 }
 
 function confirmDelete(movement: MovementData) {
-    deleteTarget.value = movement;
-    showDeleteDialog.value = true;
+  deleteTarget.value = movement;
+  showDeleteDialog.value = true;
 }
 
 function executeDelete() {
-    if (!deleteTarget.value) {
-        return;
-    }
+  if (!deleteTarget.value) {
+    return;
+  }
 
-    router.delete(movimientos.destroy.url(deleteTarget.value.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showDeleteDialog.value = false;
-            deleteTarget.value = null;
-        },
-        onError: () => {
-            showDeleteDialog.value = false;
-            deleteTarget.value = null;
-        },
-    });
+  router.delete(movimientos.destroy.url(deleteTarget.value.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      showDeleteDialog.value = false;
+      deleteTarget.value = null;
+    },
+    onError: () => {
+      showDeleteDialog.value = false;
+      deleteTarget.value = null;
+    },
+  });
 }
 
 // --- Summary calculations (from realMovements only) ---
 const summary = computed(() => {
-    const reales = props.realMovements;
-    const income = reales
-        .filter((m) => m.amount > 0)
-        .reduce((sum, m) => sum + m.amount, 0);
-    const expense = reales
-        .filter((m) => m.amount < 0)
-        .reduce((sum, m) => sum + m.amount, 0);
-    const closingBalance =
-        reales.length > 0
-            ? reales[reales.length - 1].running_balance
-            : props.openingBalance;
+  const reales = props.realMovements;
+  const income = reales.filter(m => m.amount > 0).reduce((sum, m) => sum + m.amount, 0);
+  const expense = reales.filter(m => m.amount < 0).reduce((sum, m) => sum + m.amount, 0);
+  const closingBalance = reales.length > 0 ? reales[reales.length - 1].running_balance : props.openingBalance;
 
-    return { income, expense, closingBalance };
+  return { income, expense, closingBalance };
 });
 
 // Projected running balance: starts from the projected opening (continuous with
@@ -162,69 +150,63 @@ const summary = computed(() => {
 // For the current month this equals the real closing; for future months it carries
 // the projection forward instead of restarting from the real-only opening.
 const projectedBalances = computed(() => {
-    let balance = props.projectedOpeningBalance;
+  let balance = props.projectedOpeningBalance;
 
-    return props.projectedMovements.map((m) => {
-        balance += m.amount;
+  return props.projectedMovements.map(m => {
+    balance += m.amount;
 
-        return balance;
-    });
+    return balance;
+  });
 });
 
 function formatSign(value: number): string {
-    if (value === 0) {
-        return format(value);
-    }
+  if (value === 0) {
+    return format(value);
+  }
 
-    return formatSigned(value);
+  return formatSigned(value);
 }
 
 function asMovement(row: Record<string, unknown>): MovementData {
-    return row as unknown as MovementData;
+  return row as unknown as MovementData;
 }
 
 // --- Table columns ---
 const tableColumns: ResponsiveColumn[] = [
-    { key: '__drag', header: '', dragHandle: true },
-    {
-        key: 'date',
-        header: 'Fecha',
-        className: 'font-medium whitespace-nowrap',
-    },
-    { key: 'description', header: 'Movimiento', primary: true },
-    { key: 'category', header: 'Tipo', className: 'text-muted-foreground' },
-    {
-        key: 'amount',
-        header: 'Cantidad',
-        align: 'right',
-        className: 'font-medium tabular-nums',
-    },
-    {
-        key: 'balance',
-        header: 'Balance',
-        align: 'right',
-        hideOnMobile: true,
-        className: 'font-medium tabular-nums',
-    },
+  { key: '__drag', header: '', dragHandle: true },
+  {
+    key: 'date',
+    header: 'Fecha',
+    className: 'font-medium whitespace-nowrap',
+  },
+  { key: 'description', header: 'Movimiento', primary: true },
+  { key: 'category', header: 'Tipo', className: 'text-muted-foreground' },
+  {
+    key: 'amount',
+    header: 'Cantidad',
+    align: 'right',
+    className: 'font-medium tabular-nums',
+  },
+  {
+    key: 'balance',
+    header: 'Balance',
+    align: 'right',
+    hideOnMobile: true,
+    className: 'font-medium tabular-nums',
+  },
 ];
 
 // "Actuales" renders inside a scrollable container, so its headers stay sticky.
-const actualColumns = tableColumns.map((c) =>
-    c.key === '__drag'
-        ? c
-        : { ...c, headerClassName: 'sticky top-0 z-10 bg-background' },
+const actualColumns = tableColumns.map(c =>
+  c.key === '__drag' ? c : { ...c, headerClassName: 'sticky top-0 z-10 bg-background' }
 );
 
 // "Proyectados" needs its own balance-like slot, so it uses a distinct key
 // (and a different header text) instead of sharing `cell-balance`. It is not
 // draggable, so the drag-handle column is dropped entirely.
 const projectedColumns = tableColumns
-    .filter((c) => c.key !== '__drag')
-    .map((c) =>
-        c.key === 'balance'
-            ? { ...c, key: 'projected_balance', header: 'Proyección' }
-            : c,
-    );
+  .filter(c => c.key !== '__drag')
+  .map(c => (c.key === 'balance' ? { ...c, key: 'projected_balance', header: 'Proyección' } : c));
 
 // --- Reorder handling ---
 // Display list for "Actuales": newest-first. Props keep the chronological
@@ -233,423 +215,371 @@ const projectedColumns = tableColumns
 const realList = ref<MovementData[]>([]);
 
 watch(
-    () => props.realMovements,
-    (movements) => {
-        realList.value = [...movements].reverse();
-    },
-    { immediate: true },
+  () => props.realMovements,
+  movements => {
+    realList.value = [...movements].reverse();
+  },
+  { immediate: true }
 );
 
 // The table emits ids in display (newest-first) order, but the server expects
 // chronological (oldest-first) order, so reverse before sending — the same
 // payload the previous implementation sent.
 function handleReorder(ids: number[]) {
-    if (ids.length <= 1) {
-        return;
-    }
+  if (ids.length <= 1) {
+    return;
+  }
 
-    router.patch(
-        movimientos.reorder.url(),
-        {
-            ids: [...ids].reverse(),
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                /* flash success handled by server */
-            },
-        },
-    );
+  router.patch(
+    movimientos.reorder.url(),
+    {
+      ids: [...ids].reverse(),
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        /* flash success handled by server */
+      },
+    }
+  );
 }
 </script>
 
 <template>
-    <Head :title="monthLabel" />
+  <Head :title="monthLabel" />
 
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-        <!-- Header -->
-        <div class="mb-2">
-            <h1 class="text-2xl font-bold tracking-tight">Movimientos</h1>
-            <p class="text-sm text-muted-foreground">
-                Registra y consulta tus ingresos y egresos
-            </p>
-        </div>
-
-        <!-- Month Navigation + Create Button -->
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    @click="navigateMonth(-1)"
-                    aria-label="Mes anterior"
-                    title="Mes anterior (←)"
-                >
-                    <ChevronLeft class="size-4" />
-                </Button>
-
-                <span
-                    class="min-w-[160px] text-center text-lg font-semibold capitalize"
-                >
-                    {{ monthLabel }}
-                </span>
-
-                <Button
-                    variant="outline"
-                    size="icon"
-                    @click="navigateMonth(1)"
-                    aria-label="Mes siguiente"
-                    title="Mes siguiente (→)"
-                >
-                    <ChevronRight class="size-4" />
-                </Button>
-
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    :disabled="isCurrentMonth"
-                    @click="goToToday"
-                >
-                    Hoy
-                </Button>
-            </div>
-
-            <Button @click="openCreate" title="Nuevo movimiento (N)">
-                <Plus class="mr-1 size-4" />
-                Nuevo movimiento
-            </Button>
-        </div>
-
-        <!-- Reales Section (hidden in future months — nothing has happened yet) -->
-        <Card v-if="!isFutureMonth">
-            <CardHeader class="pb-3">
-                <CardTitle class="text-base">Actuales</CardTitle>
-            </CardHeader>
-            <CardContent class="p-0">
-                <ResponsiveTable
-                    :columns="actualColumns"
-                    :rows="realList"
-                    row-key="id"
-                    draggable
-                    container-class="max-h-[560px] overflow-y-auto"
-                    @reorder="handleReorder"
-                >
-                    <template #cell-date="{ row }">
-                        {{
-                            new Date(
-                                asMovement(row).date + 'T00:00:00',
-                            ).toLocaleDateString('es-PE', {
-                                day: 'numeric',
-                                month: 'short',
-                            })
-                        }}
-                    </template>
-
-                    <template #cell-description="{ row }">
-                        <span>{{ asMovement(row).description }}</span>
-                    </template>
-
-                    <template #cell-category="{ row }">
-                        <div class="flex items-center gap-2">
-                            <span
-                                v-if="asMovement(row).category_color"
-                                class="inline-block size-3 shrink-0 rounded-full"
-                                :style="{
-                                    backgroundColor:
-                                        asMovement(row).category_color ??
-                                        undefined,
-                                }"
-                            />
-                            {{
-                                asMovement(row).category_name ?? 'Sin categoría'
-                            }}
-                        </div>
-                    </template>
-
-                    <template #cell-amount="{ row }">
-                        <span
-                            class="font-medium tabular-nums"
-                            :class="
-                                asMovement(row).amount >= 0
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
-                            "
-                        >
-                            {{ formatSigned(asMovement(row).amount) }}
-                        </span>
-                    </template>
-
-                    <template #cell-balance="{ row }">
-                        {{ format(asMovement(row).running_balance) }}
-                    </template>
-
-                    <template #actions="{ row }">
-                        <div class="flex items-center justify-end gap-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="size-8"
-                                @click="openEdit(asMovement(row))"
-                                aria-label="Editar movimiento"
-                            >
-                                <Pencil class="size-3.5" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                                @click="confirmDelete(asMovement(row))"
-                                aria-label="Eliminar movimiento"
-                            >
-                                <Trash2 class="size-3.5" />
-                            </Button>
-                        </div>
-                    </template>
-
-                    <template #empty> No hay movimientos reales. </template>
-
-                    <template #footer>
-                        <tbody class="bg-muted/30">
-                            <tr>
-                                <td :class="densityClass.cell" />
-                                <td
-                                    :class="[
-                                        densityClass.cell,
-                                        'font-medium text-muted-foreground',
-                                    ]"
-                                    colspan="2"
-                                >
-                                    Saldo inicial
-                                </td>
-                                <td :class="densityClass.cell" />
-                                <td
-                                    :class="[
-                                        densityClass.cell,
-                                        'text-right font-medium text-muted-foreground',
-                                    ]"
-                                >
-                                    {{ format(openingBalance) }}
-                                </td>
-                                <td
-                                    :class="[
-                                        densityClass.cell,
-                                        'text-right font-medium',
-                                    ]"
-                                >
-                                    {{ format(openingBalance) }}
-                                </td>
-                                <td :class="densityClass.cell" />
-                            </tr>
-                        </tbody>
-                    </template>
-                </ResponsiveTable>
-            </CardContent>
-        </Card>
-
-        <!-- Proyectados Section (hidden in past months — projections are future-only) -->
-        <Card v-if="!isPastMonth">
-            <CardHeader class="pb-3">
-                <CardTitle class="text-base">Proyectados</CardTitle>
-            </CardHeader>
-            <CardContent class="p-0">
-                <ResponsiveTable
-                    :columns="projectedColumns"
-                    :rows="
-                        projectedMovements as unknown as Record<
-                            string,
-                            unknown
-                        >[]
-                    "
-                    row-key="id"
-                    container-class="overflow-auto"
-                >
-                    <template #cell-date="{ row }">
-                        {{
-                            new Date(
-                                asMovement(row).date + 'T00:00:00',
-                            ).toLocaleDateString('es-PE', {
-                                day: 'numeric',
-                                month: 'short',
-                            })
-                        }}
-                    </template>
-
-                    <template #cell-description="{ row }">
-                        <div class="flex items-center gap-2">
-                            <span>{{ asMovement(row).description }}</span>
-                            <Badge
-                                variant="outline"
-                                class="border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
-                            >
-                                Proyectado
-                            </Badge>
-                        </div>
-                    </template>
-
-                    <template #cell-category="{ row }">
-                        <div class="flex items-center gap-2">
-                            <span
-                                v-if="asMovement(row).category_color"
-                                class="inline-block size-3 shrink-0 rounded-full"
-                                :style="{
-                                    backgroundColor:
-                                        asMovement(row).category_color ??
-                                        undefined,
-                                }"
-                            />
-                            {{
-                                asMovement(row).category_name ?? 'Sin categoría'
-                            }}
-                        </div>
-                    </template>
-
-                    <template #cell-amount="{ row }">
-                        <span
-                            class="font-medium tabular-nums"
-                            :class="
-                                asMovement(row).amount >= 0
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
-                            "
-                        >
-                            {{ formatSigned(asMovement(row).amount) }}
-                        </span>
-                    </template>
-
-                    <template #cell-projected_balance="{ index }">
-                        <span
-                            :class="
-                                projectedBalances[index] >= 0
-                                    ? 'text-muted-foreground'
-                                    : 'text-red-600/60 dark:text-red-400/60'
-                            "
-                        >
-                            {{ format(projectedBalances[index]) }}
-                        </span>
-                    </template>
-
-                    <template #actions="{ row }">
-                        <div class="flex items-center justify-end gap-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="size-8"
-                                @click="openEdit(asMovement(row))"
-                                aria-label="Editar movimiento"
-                            >
-                                <Pencil class="size-3.5" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                                @click="confirmDelete(asMovement(row))"
-                                aria-label="Eliminar movimiento"
-                            >
-                                <Trash2 class="size-3.5" />
-                            </Button>
-                        </div>
-                    </template>
-
-                    <template #empty>
-                        No hay movimientos proyectados.
-                    </template>
-                </ResponsiveTable>
-            </CardContent>
-        </Card>
-
-        <!-- Monthly Summary (from realMovements only) -->
-        <div
-            v-if="realMovements.length > 0"
-            class="flex flex-wrap gap-6 rounded-md border p-4"
-        >
-            <div class="flex flex-col gap-1">
-                <span
-                    class="text-xs tracking-wide text-muted-foreground uppercase"
-                >
-                    Ingresos
-                </span>
-                <span
-                    class="text-lg font-semibold text-green-600 tabular-nums dark:text-green-400"
-                >
-                    {{ format(summary.income) }}
-                </span>
-            </div>
-            <div class="flex flex-col gap-1">
-                <span
-                    class="text-xs tracking-wide text-muted-foreground uppercase"
-                >
-                    Gastos
-                </span>
-                <span
-                    class="text-lg font-semibold text-red-600 tabular-nums dark:text-red-400"
-                >
-                    {{ format(Math.abs(summary.expense)) }}
-                </span>
-            </div>
-            <div class="flex flex-col gap-1">
-                <span
-                    class="text-xs tracking-wide text-muted-foreground uppercase"
-                >
-                    Neto del mes
-                </span>
-                <span
-                    class="text-lg font-semibold tabular-nums"
-                    :class="
-                        summary.income + summary.expense >= 0
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                    "
-                >
-                    {{ formatSign(summary.income + summary.expense) }}
-                </span>
-            </div>
-            <div class="ml-auto flex flex-col gap-1">
-                <span
-                    class="text-xs tracking-wide text-muted-foreground uppercase"
-                >
-                    Balance final
-                </span>
-                <span class="text-lg font-semibold tabular-nums">
-                    {{ format(summary.closingBalance) }}
-                </span>
-            </div>
-        </div>
+  <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+    <!-- Header -->
+    <div class="mb-2">
+      <h1 class="text-2xl font-bold tracking-tight">Movimientos</h1>
+      <p class="text-sm text-muted-foreground">Registra y consulta tus ingresos y egresos</p>
     </div>
 
-    <!-- Create / Edit Dialog -->
-    <MovementDialog
-        v-model:open="showCreateDialog"
-        :movement="editingMovement"
-        :categories="categories"
-        @saved="showCreateDialog = false"
-    />
+    <!-- Month Navigation + Create Button -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Mes anterior"
+          title="Mes anterior (←)"
+          @click="navigateMonth(-1)"
+        >
+          <ChevronLeft class="size-4" />
+        </Button>
 
-    <!-- Delete Confirmation Dialog -->
-    <Dialog :open="showDeleteDialog" @update:open="showDeleteDialog = false">
-        <DialogContent class="sm:max-w-[380px]">
-            <DialogHeader>
-                <DialogTitle>Eliminar movimiento</DialogTitle>
-                <DialogDescription>
-                    ¿Estás seguro de eliminar este movimiento?
-                    <br />
-                    <strong>{{ deleteTarget?.description }}</strong>
-                    &mdash;
-                    <span v-if="deleteTarget">
-                        {{ formatSigned(deleteTarget.amount) }}
-                    </span>
-                    <br />
-                    Esta acción no se puede deshacer.
-                </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-                <Button variant="outline" @click="showDeleteDialog = false">
-                    Cancelar
-                </Button>
-                <Button variant="destructive" @click="executeDelete">
-                    Eliminar
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+        <span class="min-w-[160px] text-center text-lg font-semibold capitalize">
+          {{ monthLabel }}
+        </span>
+
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Mes siguiente"
+          title="Mes siguiente (→)"
+          @click="navigateMonth(1)"
+        >
+          <ChevronRight class="size-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="isCurrentMonth"
+          @click="goToToday"
+        >
+          Hoy
+        </Button>
+      </div>
+
+      <Button
+        title="Nuevo movimiento (N)"
+        @click="openCreate"
+      >
+        <Plus class="mr-1 size-4" />
+        Nuevo movimiento
+      </Button>
+    </div>
+
+    <!-- Reales Section (hidden in future months — nothing has happened yet) -->
+    <Card v-if="!isFutureMonth">
+      <CardHeader class="pb-3">
+        <CardTitle class="text-base">Actuales</CardTitle>
+      </CardHeader>
+      <CardContent class="p-0">
+        <ResponsiveTable
+          :columns="actualColumns"
+          :rows="realList"
+          row-key="id"
+          draggable
+          container-class="max-h-[560px] overflow-y-auto"
+          @reorder="handleReorder"
+        >
+          <template #cell-date="{ row }">
+            {{
+              new Date(asMovement(row).date + 'T00:00:00').toLocaleDateString('es-PE', {
+                day: 'numeric',
+                month: 'short',
+              })
+            }}
+          </template>
+
+          <template #cell-description="{ row }">
+            <span>{{ asMovement(row).description }}</span>
+          </template>
+
+          <template #cell-category="{ row }">
+            <div class="flex items-center gap-2">
+              <span
+                v-if="asMovement(row).category_color"
+                class="inline-block size-3 shrink-0 rounded-full"
+                :style="{
+                  backgroundColor: asMovement(row).category_color ?? undefined,
+                }"
+              />
+              {{ asMovement(row).category_name ?? 'Sin categoría' }}
+            </div>
+          </template>
+
+          <template #cell-amount="{ row }">
+            <span
+              class="font-medium tabular-nums"
+              :class="
+                asMovement(row).amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+              "
+            >
+              {{ formatSigned(asMovement(row).amount) }}
+            </span>
+          </template>
+
+          <template #cell-balance="{ row }">
+            {{ format(asMovement(row).running_balance) }}
+          </template>
+
+          <template #actions="{ row }">
+            <div class="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8"
+                aria-label="Editar movimiento"
+                @click="openEdit(asMovement(row))"
+              >
+                <Pencil class="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                aria-label="Eliminar movimiento"
+                @click="confirmDelete(asMovement(row))"
+              >
+                <Trash2 class="size-3.5" />
+              </Button>
+            </div>
+          </template>
+
+          <template #empty> No hay movimientos reales. </template>
+
+          <template #footer>
+            <tbody class="bg-muted/30">
+              <tr>
+                <td :class="densityClass.cell" />
+                <td
+                  :class="[densityClass.cell, 'font-medium text-muted-foreground']"
+                  colspan="2"
+                >
+                  Saldo inicial
+                </td>
+                <td :class="densityClass.cell" />
+                <td :class="[densityClass.cell, 'text-right font-medium text-muted-foreground']">
+                  {{ format(openingBalance) }}
+                </td>
+                <td :class="[densityClass.cell, 'text-right font-medium']">
+                  {{ format(openingBalance) }}
+                </td>
+                <td :class="densityClass.cell" />
+              </tr>
+            </tbody>
+          </template>
+        </ResponsiveTable>
+      </CardContent>
+    </Card>
+
+    <!-- Proyectados Section (hidden in past months — projections are future-only) -->
+    <Card v-if="!isPastMonth">
+      <CardHeader class="pb-3">
+        <CardTitle class="text-base">Proyectados</CardTitle>
+      </CardHeader>
+      <CardContent class="p-0">
+        <ResponsiveTable
+          :columns="projectedColumns"
+          :rows="projectedMovements as unknown as Record<string, unknown>[]"
+          row-key="id"
+          container-class="overflow-auto"
+        >
+          <template #cell-date="{ row }">
+            {{
+              new Date(asMovement(row).date + 'T00:00:00').toLocaleDateString('es-PE', {
+                day: 'numeric',
+                month: 'short',
+              })
+            }}
+          </template>
+
+          <template #cell-description="{ row }">
+            <div class="flex items-center gap-2">
+              <span>{{ asMovement(row).description }}</span>
+              <Badge
+                variant="outline"
+                class="border-amber-300 bg-amber-50 px-1.5 py-0 text-[10px] text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
+              >
+                Proyectado
+              </Badge>
+            </div>
+          </template>
+
+          <template #cell-category="{ row }">
+            <div class="flex items-center gap-2">
+              <span
+                v-if="asMovement(row).category_color"
+                class="inline-block size-3 shrink-0 rounded-full"
+                :style="{
+                  backgroundColor: asMovement(row).category_color ?? undefined,
+                }"
+              />
+              {{ asMovement(row).category_name ?? 'Sin categoría' }}
+            </div>
+          </template>
+
+          <template #cell-amount="{ row }">
+            <span
+              class="font-medium tabular-nums"
+              :class="
+                asMovement(row).amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+              "
+            >
+              {{ formatSigned(asMovement(row).amount) }}
+            </span>
+          </template>
+
+          <template #cell-projected_balance="{ index }">
+            <span
+              :class="projectedBalances[index] >= 0 ? 'text-muted-foreground' : 'text-red-600/60 dark:text-red-400/60'"
+            >
+              {{ format(projectedBalances[index]) }}
+            </span>
+          </template>
+
+          <template #actions="{ row }">
+            <div class="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8"
+                aria-label="Editar movimiento"
+                @click="openEdit(asMovement(row))"
+              >
+                <Pencil class="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                aria-label="Eliminar movimiento"
+                @click="confirmDelete(asMovement(row))"
+              >
+                <Trash2 class="size-3.5" />
+              </Button>
+            </div>
+          </template>
+
+          <template #empty> No hay movimientos proyectados. </template>
+        </ResponsiveTable>
+      </CardContent>
+    </Card>
+
+    <!-- Monthly Summary (from realMovements only) -->
+    <div
+      v-if="realMovements.length > 0"
+      class="flex flex-wrap gap-6 rounded-md border p-4"
+    >
+      <div class="flex flex-col gap-1">
+        <span class="text-xs tracking-wide text-muted-foreground uppercase"> Ingresos </span>
+        <span class="text-lg font-semibold text-green-600 tabular-nums dark:text-green-400">
+          {{ format(summary.income) }}
+        </span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-xs tracking-wide text-muted-foreground uppercase"> Gastos </span>
+        <span class="text-lg font-semibold text-red-600 tabular-nums dark:text-red-400">
+          {{ format(Math.abs(summary.expense)) }}
+        </span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-xs tracking-wide text-muted-foreground uppercase"> Neto del mes </span>
+        <span
+          class="text-lg font-semibold tabular-nums"
+          :class="
+            summary.income + summary.expense >= 0
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-600 dark:text-red-400'
+          "
+        >
+          {{ formatSign(summary.income + summary.expense) }}
+        </span>
+      </div>
+      <div class="ml-auto flex flex-col gap-1">
+        <span class="text-xs tracking-wide text-muted-foreground uppercase"> Balance final </span>
+        <span class="text-lg font-semibold tabular-nums">
+          {{ format(summary.closingBalance) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create / Edit Dialog -->
+  <MovementDialog
+    v-model:open="showCreateDialog"
+    :movement="editingMovement"
+    :categories="categories"
+    @saved="showCreateDialog = false"
+  />
+
+  <!-- Delete Confirmation Dialog -->
+  <Dialog
+    :open="showDeleteDialog"
+    @update:open="showDeleteDialog = false"
+  >
+    <DialogContent class="sm:max-w-[380px]">
+      <DialogHeader>
+        <DialogTitle>Eliminar movimiento</DialogTitle>
+        <DialogDescription>
+          ¿Estás seguro de eliminar este movimiento?
+          <br />
+          <strong>{{ deleteTarget?.description }}</strong>
+          &mdash;
+          <span v-if="deleteTarget">
+            {{ formatSigned(deleteTarget.amount) }}
+          </span>
+          <br />
+          Esta acción no se puede deshacer.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button
+          variant="outline"
+          @click="showDeleteDialog = false"
+        >
+          Cancelar
+        </Button>
+        <Button
+          variant="destructive"
+          @click="executeDelete"
+        >
+          Eliminar
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
