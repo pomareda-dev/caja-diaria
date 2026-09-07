@@ -78,7 +78,9 @@ function resetForm() {
 function populateFormForEdit(movement: MovementData) {
     form.date = movement.date;
     form.description = movement.description;
-    form.category_id = movement.category_id ? String(movement.category_id) : 'none';
+    form.category_id = movement.category_id
+        ? String(movement.category_id)
+        : 'none';
     form.notes = movement.notes || '';
     form.is_projected = movement.is_projected ?? false;
 
@@ -98,7 +100,10 @@ watch(
             populateFormForEdit(props.movement);
         } else if (isOpen && !props.movement) {
             const today = new Date();
-            form.date = today.toISOString().split('T')[0];
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            form.date = `${year}-${month}-${day}`;
         }
     },
 );
@@ -161,7 +166,11 @@ function submit() {
                         type="button"
                         variant="outline"
                         class="flex-1"
-                        :class="transactionType === 'income' ? 'bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-400 dark:border-green-800' : ''"
+                        :class="
+                            transactionType === 'income'
+                                ? 'border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400'
+                                : ''
+                        "
                         @click="transactionType = 'income'"
                     >
                         Ingreso
@@ -170,7 +179,11 @@ function submit() {
                         type="button"
                         variant="outline"
                         class="flex-1"
-                        :class="transactionType === 'expense' ? 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-400 dark:border-red-800' : ''"
+                        :class="
+                            transactionType === 'expense'
+                                ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
+                                : ''
+                        "
                         @click="transactionType = 'expense'"
                     >
                         Gasto
@@ -194,20 +207,13 @@ function submit() {
                 <!-- Fecha -->
                 <div class="grid gap-2">
                     <Label for="date">Fecha</Label>
-                    <Input
-                        id="date"
-                        type="date"
-                        v-model="form.date"
-                    />
+                    <Input id="date" type="date" v-model="form.date" />
                     <InputError :message="form.errors.date" />
                 </div>
 
                 <!-- Proyectado -->
                 <div class="flex items-center gap-3">
-                    <Switch
-                        id="is_projected"
-                        v-model="form.is_projected"
-                    />
+                    <Switch id="is_projected" v-model="form.is_projected" />
                     <Label for="is_projected" class="cursor-pointer">
                         Marcar como proyectado
                     </Label>
@@ -257,7 +263,7 @@ function submit() {
                     <textarea
                         id="notes"
                         v-model="form.notes"
-                        class="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                         placeholder="Notas adicionales..."
                     />
                     <InputError :message="form.errors.notes" />
@@ -271,11 +277,14 @@ function submit() {
                     >
                         Cancelar
                     </Button>
-                    <Button
-                        type="submit"
-                        :disabled="form.processing"
-                    >
-                        {{ form.processing ? 'Guardando...' : isEditing() ? 'Actualizar' : 'Registrar' }}
+                    <Button type="submit" :disabled="form.processing">
+                        {{
+                            form.processing
+                                ? 'Guardando...'
+                                : isEditing()
+                                  ? 'Actualizar'
+                                  : 'Registrar'
+                        }}
                     </Button>
                 </DialogFooter>
             </form>
