@@ -1,52 +1,58 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import type { User } from '@/types';
+import { computed } from 'vue';
 
 type Props = {
-    user: User;
-    showEmail?: boolean;
+  user: User;
+  showEmail?: boolean;
 };
 
 const props = withDefaults(defineProps<Props>(), {
-    showEmail: false,
+  showEmail: false,
 });
 
 const { getInitials } = useInitials();
 
 const avatarUrl = computed<string | undefined>(() => {
-    // Legacy `user.avatar` property (from starter kit seed)
-    if (props.user.avatar && props.user.avatar !== '') {
-        return props.user.avatar;
-    }
+  // Legacy `user.avatar` property (from starter kit seed)
+  if (props.user.avatar && props.user.avatar !== '') {
+    return props.user.avatar;
+  }
 
-    // New `settings.avatar_path` from preferences photo upload
-    const settings = props.user.settings as Record<string, unknown> | null | undefined;
-    const avatarPath = settings?.avatar_path as string | undefined;
+  // New `settings.avatar_path` from preferences photo upload
+  const settings = props.user.settings as Record<string, unknown> | null | undefined;
+  const avatarPath = settings?.avatar_path as string | undefined;
 
-    if (avatarPath && avatarPath !== '') {
-        return `/storage/${avatarPath}`;
-    }
+  if (avatarPath && avatarPath !== '') {
+    return `/storage/${avatarPath}`;
+  }
 
-    return undefined;
+  return undefined;
 });
 
 const showAvatar = computed(() => avatarUrl.value !== undefined);
 </script>
 
 <template>
-    <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
-        <AvatarImage v-if="showAvatar" :src="avatarUrl!" :alt="user.name" />
-        <AvatarFallback class="rounded-lg text-black dark:text-white">
-            {{ getInitials(user.name) }}
-        </AvatarFallback>
-    </Avatar>
+  <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
+    <AvatarImage
+      v-if="showAvatar"
+      :src="avatarUrl!"
+      :alt="user.name"
+    />
+    <AvatarFallback class="rounded-lg text-black dark:text-white">
+      {{ getInitials(user.name) }}
+    </AvatarFallback>
+  </Avatar>
 
-    <div class="grid flex-1 text-left text-sm leading-tight">
-        <span class="truncate font-medium">{{ user.name }}</span>
-        <span v-if="showEmail" class="truncate text-xs text-muted-foreground">{{
-            user.email
-        }}</span>
-    </div>
+  <div class="grid flex-1 text-left text-sm leading-tight">
+    <span class="truncate font-medium">{{ user.name }}</span>
+    <span
+      v-if="showEmail"
+      class="truncate text-xs text-muted-foreground"
+      >{{ user.email }}</span
+    >
+  </div>
 </template>

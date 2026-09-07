@@ -1,38 +1,38 @@
 <script setup lang="ts">
+import { useSettings } from '@/composables/useSettings';
 import { GripVertical } from '@lucide/vue';
 import { computed, useSlots } from 'vue';
 import Draggable from 'vuedraggable';
-import { useSettings } from '@/composables/useSettings';
 
 export interface ResponsiveColumn {
-    key: string;
-    header: string;
-    align?: 'left' | 'right' | 'center';
-    hideOnMobile?: boolean;
-    primary?: boolean;
-    dragHandle?: boolean;
-    className?: string;
-    headerClassName?: string;
+  key: string;
+  header: string;
+  align?: 'left' | 'right' | 'center';
+  hideOnMobile?: boolean;
+  primary?: boolean;
+  dragHandle?: boolean;
+  className?: string;
+  headerClassName?: string;
 }
 
 const props = withDefaults(
-    defineProps<{
-        columns: ResponsiveColumn[];
-        rows: Record<string, unknown>[];
-        rowKey: string;
-        draggable?: boolean;
-        containerClass?: string;
-        tableClass?: string;
-    }>(),
-    {
-        draggable: false,
-        containerClass: 'rounded-md border',
-        tableClass: '',
-    },
+  defineProps<{
+    columns: ResponsiveColumn[];
+    rows: Record<string, unknown>[];
+    rowKey: string;
+    draggable?: boolean;
+    containerClass?: string;
+    tableClass?: string;
+  }>(),
+  {
+    draggable: false,
+    containerClass: 'rounded-md border',
+    tableClass: '',
+  }
 );
 
 const emit = defineEmits<{
-    reorder: [ids: number[]];
+  reorder: [ids: number[]];
 }>();
 
 const slots = useSlots();
@@ -43,272 +43,255 @@ const visibleDesktopColumns = computed(() => props.columns);
 const hasActions = computed(() => Boolean(slots.actions));
 
 const primaryColumn = computed<ResponsiveColumn | null>(
-    () =>
-        props.columns.find((column) => column.primary) ??
-        props.columns.find(
-            (column) => !column.hideOnMobile && !column.dragHandle,
-        ) ??
-        null,
+  () =>
+    props.columns.find(column => column.primary) ??
+    props.columns.find(column => !column.hideOnMobile && !column.dragHandle) ??
+    null
 );
 
 const mobileFields = computed(() =>
-    props.columns.filter(
-        (column) =>
-            !column.dragHandle &&
-            !column.hideOnMobile &&
-            column.key !== primaryColumn.value?.key,
-    ),
+  props.columns.filter(column => !column.dragHandle && !column.hideOnMobile && column.key !== primaryColumn.value?.key)
 );
 
-const colspanDesktop = computed(
-    () => props.columns.length + (hasActions.value ? 1 : 0),
-);
+const colspanDesktop = computed(() => props.columns.length + (hasActions.value ? 1 : 0));
 
 function alignClass(align?: ResponsiveColumn['align']): string {
-    switch (align) {
-        case 'right':
-            return 'text-right';
-        case 'center':
-            return 'text-center';
-        default:
-            return '';
-    }
+  switch (align) {
+    case 'right':
+      return 'text-right';
+    case 'center':
+      return 'text-center';
+    default:
+      return '';
+  }
 }
 
 function rowKeyValue(row: Record<string, unknown>): string {
-    return String(row[props.rowKey]);
+  return String(row[props.rowKey]);
 }
 
 function handleDragEnd() {
-    emit(
-        'reorder',
-        props.rows.map((row) => row[props.rowKey] as number),
-    );
+  emit(
+    'reorder',
+    props.rows.map(row => row[props.rowKey] as number)
+  );
 }
 </script>
 
 <template>
-    <div>
-        <!-- DESKTOP -->
-        <div :class="['hidden md:block', containerClass]">
-            <table class="w-full caption-bottom text-sm" :class="tableClass">
-                <thead>
-                    <tr>
-                        <th
-                            v-for="col in visibleDesktopColumns"
-                            :key="col.key"
-                            scope="col"
-                            :class="[
-                                densityClass.header,
-                                col.headerClassName,
-                                alignClass(col.align),
-                            ]"
-                        >
-                            {{ col.header }}
-                        </th>
-                        <th v-if="hasActions" :class="densityClass.header" />
-                    </tr>
-                </thead>
-
-                <Draggable
-                    v-if="draggable"
-                    :list="rows"
-                    tag="tbody"
-                    :handle="'.drag-handle'"
-                    :animation="150"
-                    :item-key="rowKey"
-                    @end="handleDragEnd"
-                >
-                    <template #item="{ element, index }">
-                        <tr
-                            :class="[
-                                'border-b transition-colors hover:bg-muted/50',
-                            ]"
-                        >
-                            <template
-                                v-for="col in visibleDesktopColumns"
-                                :key="col.key"
-                            >
-                                <td
-                                    v-if="col.dragHandle"
-                                    :class="[densityClass.cell, 'p-0 pl-2']"
-                                >
-                                    <GripVertical
-                                        class="drag-handle size-4 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground active:cursor-grabbing"
-                                    />
-                                </td>
-                                <td
-                                    v-else
-                                    :class="[
-                                        densityClass.cell,
-                                        alignClass(col.align),
-                                        col.className,
-                                    ]"
-                                >
-                                    <slot
-                                        :name="'cell-' + col.key"
-                                        :row="element"
-                                        :column="col"
-                                        :index="index"
-                                    >
-                                        {{ element[col.key] ?? '—' }}
-                                    </slot>
-                                </td>
-                            </template>
-                            <td v-if="hasActions" :class="densityClass.cell">
-                                <slot name="actions" :row="element" />
-                            </td>
-                        </tr>
-                    </template>
-                </Draggable>
-                <tbody v-if="draggable && rows.length === 0">
-                    <tr>
-                        <td
-                            :colspan="colspanDesktop"
-                            class="py-8 text-center text-muted-foreground"
-                        >
-                            <slot name="empty" />
-                        </td>
-                    </tr>
-                </tbody>
-                <tbody v-if="!draggable">
-                    <template
-                        v-for="(row, index) in rows"
-                        :key="rowKeyValue(row)"
-                    >
-                        <tr
-                            :class="[
-                                'border-b transition-colors hover:bg-muted/50',
-                            ]"
-                        >
-                            <template
-                                v-for="col in visibleDesktopColumns"
-                                :key="col.key"
-                            >
-                                <td
-                                    v-if="col.dragHandle"
-                                    :class="[densityClass.cell, 'p-0 pl-2']"
-                                >
-                                    <GripVertical
-                                        class="drag-handle size-4 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground active:cursor-grabbing"
-                                    />
-                                </td>
-                                <td
-                                    v-else
-                                    :class="[
-                                        densityClass.cell,
-                                        alignClass(col.align),
-                                        col.className,
-                                    ]"
-                                >
-                                    <slot
-                                        :name="'cell-' + col.key"
-                                        :row="row"
-                                        :column="col"
-                                        :index="index"
-                                    >
-                                        {{ row[col.key] ?? '—' }}
-                                    </slot>
-                                </td>
-                            </template>
-                            <td v-if="hasActions" :class="densityClass.cell">
-                                <slot name="actions" :row="row" />
-                            </td>
-                        </tr>
-                    </template>
-                    <tr v-if="rows.length === 0">
-                        <td
-                            :colspan="colspanDesktop"
-                            class="py-8 text-center text-muted-foreground"
-                        >
-                            <slot name="empty" />
-                        </td>
-                    </tr>
-                </tbody>
-                <slot name="footer" />
-            </table>
-        </div>
-
-        <!-- MOBILE -->
-        <div v-if="rows.length > 0" class="flex flex-col gap-2 md:hidden">
-            <div
-                v-for="(row, index) in rows"
-                :key="rowKeyValue(row)"
-                class="rounded-lg border p-3"
+  <div>
+    <!-- DESKTOP -->
+    <div :class="['hidden md:block', containerClass]">
+      <table
+        class="w-full caption-bottom text-sm"
+        :class="tableClass"
+      >
+        <thead>
+          <tr>
+            <th
+              v-for="col in visibleDesktopColumns"
+              :key="col.key"
+              scope="col"
+              :class="[densityClass.header, col.headerClassName, alignClass(col.align)]"
             >
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        <div
-                            v-if="primaryColumn"
-                            :class="[
-                                'text-sm font-semibold',
-                                primaryColumn.className,
-                            ]"
-                        >
-                            <slot
-                                :name="'card-' + primaryColumn.key"
-                                :row="row"
-                                :column="primaryColumn"
-                                :index="index"
-                            >
-                                <slot
-                                    :name="'cell-' + primaryColumn.key"
-                                    :row="row"
-                                    :column="primaryColumn"
-                                    :index="index"
-                                >
-                                    {{ row[primaryColumn.key] ?? '—' }}
-                                </slot>
-                            </slot>
-                        </div>
-                        <div
-                            v-for="col in mobileFields"
-                            :key="col.key"
-                            class="mt-1.5 flex items-baseline justify-between gap-2 text-xs"
-                        >
-                            <span class="text-muted-foreground">{{
-                                col.header
-                            }}</span>
-                            <span
-                                :class="[
-                                    col.className,
-                                    col.align === 'right'
-                                        ? 'text-right tabular-nums'
-                                        : '',
-                                ]"
-                            >
-                                <slot
-                                    :name="'card-' + col.key"
-                                    :row="row"
-                                    :column="col"
-                                    :index="index"
-                                >
-                                    <slot
-                                        :name="'cell-' + col.key"
-                                        :row="row"
-                                        :column="col"
-                                        :index="index"
-                                    >
-                                        {{ row[col.key] ?? '—' }}
-                                    </slot>
-                                </slot>
-                            </span>
-                        </div>
-                    </div>
-                    <div
-                        v-if="hasActions"
-                        class="flex shrink-0 items-center gap-1"
-                    >
-                        <slot name="actions" :row="row" />
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div
-            v-else
-            class="rounded-lg border p-4 text-center text-sm text-muted-foreground md:hidden"
+              {{ col.header }}
+            </th>
+            <th
+              v-if="hasActions"
+              :class="densityClass.header"
+            />
+          </tr>
+        </thead>
+
+        <Draggable
+          v-if="draggable"
+          :list="rows"
+          tag="tbody"
+          :handle="'.drag-handle'"
+          :animation="150"
+          :item-key="rowKey"
+          @end="handleDragEnd"
         >
-            <slot name="empty" />
-        </div>
+          <template #item="{ element, index }">
+            <tr :class="['border-b transition-colors hover:bg-muted/50']">
+              <template
+                v-for="col in visibleDesktopColumns"
+                :key="col.key"
+              >
+                <td
+                  v-if="col.dragHandle"
+                  :class="[densityClass.cell, 'p-0 pl-2']"
+                >
+                  <GripVertical
+                    class="drag-handle size-4 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+                  />
+                </td>
+                <td
+                  v-else
+                  :class="[densityClass.cell, alignClass(col.align), col.className]"
+                >
+                  <slot
+                    :name="'cell-' + col.key"
+                    :row="element"
+                    :column="col"
+                    :index="index"
+                  >
+                    {{ element[col.key] ?? '—' }}
+                  </slot>
+                </td>
+              </template>
+              <td
+                v-if="hasActions"
+                :class="densityClass.cell"
+              >
+                <slot
+                  name="actions"
+                  :row="element"
+                />
+              </td>
+            </tr>
+          </template>
+        </Draggable>
+        <tbody v-if="draggable && rows.length === 0">
+          <tr>
+            <td
+              :colspan="colspanDesktop"
+              class="py-8 text-center text-muted-foreground"
+            >
+              <slot name="empty" />
+            </td>
+          </tr>
+        </tbody>
+        <tbody v-if="!draggable">
+          <template
+            v-for="(row, index) in rows"
+            :key="rowKeyValue(row)"
+          >
+            <tr :class="['border-b transition-colors hover:bg-muted/50']">
+              <template
+                v-for="col in visibleDesktopColumns"
+                :key="col.key"
+              >
+                <td
+                  v-if="col.dragHandle"
+                  :class="[densityClass.cell, 'p-0 pl-2']"
+                >
+                  <GripVertical
+                    class="drag-handle size-4 cursor-grab text-muted-foreground/50 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+                  />
+                </td>
+                <td
+                  v-else
+                  :class="[densityClass.cell, alignClass(col.align), col.className]"
+                >
+                  <slot
+                    :name="'cell-' + col.key"
+                    :row="row"
+                    :column="col"
+                    :index="index"
+                  >
+                    {{ row[col.key] ?? '—' }}
+                  </slot>
+                </td>
+              </template>
+              <td
+                v-if="hasActions"
+                :class="densityClass.cell"
+              >
+                <slot
+                  name="actions"
+                  :row="row"
+                />
+              </td>
+            </tr>
+          </template>
+          <tr v-if="rows.length === 0">
+            <td
+              :colspan="colspanDesktop"
+              class="py-8 text-center text-muted-foreground"
+            >
+              <slot name="empty" />
+            </td>
+          </tr>
+        </tbody>
+        <slot name="footer" />
+      </table>
     </div>
+
+    <!-- MOBILE -->
+    <div
+      v-if="rows.length > 0"
+      class="flex flex-col gap-2 md:hidden"
+    >
+      <div
+        v-for="(row, index) in rows"
+        :key="rowKeyValue(row)"
+        class="rounded-lg border p-3"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <div
+              v-if="primaryColumn"
+              :class="['text-sm font-semibold', primaryColumn.className]"
+            >
+              <slot
+                :name="'card-' + primaryColumn.key"
+                :row="row"
+                :column="primaryColumn"
+                :index="index"
+              >
+                <slot
+                  :name="'cell-' + primaryColumn.key"
+                  :row="row"
+                  :column="primaryColumn"
+                  :index="index"
+                >
+                  {{ row[primaryColumn.key] ?? '—' }}
+                </slot>
+              </slot>
+            </div>
+            <div
+              v-for="col in mobileFields"
+              :key="col.key"
+              class="mt-1.5 flex items-baseline justify-between gap-2 text-xs"
+            >
+              <span class="text-muted-foreground">{{ col.header }}</span>
+              <span :class="[col.className, col.align === 'right' ? 'text-right tabular-nums' : '']">
+                <slot
+                  :name="'card-' + col.key"
+                  :row="row"
+                  :column="col"
+                  :index="index"
+                >
+                  <slot
+                    :name="'cell-' + col.key"
+                    :row="row"
+                    :column="col"
+                    :index="index"
+                  >
+                    {{ row[col.key] ?? '—' }}
+                  </slot>
+                </slot>
+              </span>
+            </div>
+          </div>
+          <div
+            v-if="hasActions"
+            class="flex shrink-0 items-center gap-1"
+          >
+            <slot
+              name="actions"
+              :row="row"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-else
+      class="rounded-lg border p-4 text-center text-sm text-muted-foreground md:hidden"
+    >
+      <slot name="empty" />
+    </div>
+  </div>
 </template>

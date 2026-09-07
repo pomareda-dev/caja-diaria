@@ -1,63 +1,53 @@
+import { update as updateSettingsRoute } from '@/routes/settings';
 import { usePage } from '@inertiajs/vue3';
 import { computed, reactive, watch } from 'vue';
 import { toast } from 'vue-sonner';
-import { update as updateSettingsRoute } from '@/routes/settings';
 
 /**
  * Shape of the `settings` JSON column on the User model.
  * All keys are optional — defaults are applied in the composable.
  */
 export interface UserSettings {
-    theme:
-        | 'default'
-        | 'bold-tech'
-        | 'claude'
-        | 'pastel-dreams'
-        | 'quantum-rose'
-        | 'sunny-sprout'
-        | 'twitter'
-        | 'violet-bloom';
-    density: 'compact' | 'comfortable';
-    start_section:
-        'dashboard' | 'movements' | 'categories' | 'accounts' | 'recurring';
-    projection_horizon: number;
-    avatar_path: string | null;
-    debt_category_id: number | null;
+  theme:
+    'default' | 'bold-tech' | 'claude' | 'pastel-dreams' | 'quantum-rose' | 'sunny-sprout' | 'twitter' | 'violet-bloom';
+  density: 'compact' | 'comfortable';
+  start_section: 'dashboard' | 'movements' | 'categories' | 'accounts' | 'recurring';
+  projection_horizon: number;
+  avatar_path: string | null;
+  debt_category_id: number | null;
 }
 
 const defaults: UserSettings = {
-    theme: 'default',
-    density: 'comfortable',
-    start_section: 'dashboard',
-    projection_horizon: 12,
-    avatar_path: null,
-    debt_category_id: null,
+  theme: 'default',
+  density: 'comfortable',
+  start_section: 'dashboard',
+  projection_horizon: 12,
+  avatar_path: null,
+  debt_category_id: null,
 };
 
 /**
  * Read the XSRF-TOKEN cookie for fetch requests to Laravel.
  */
 function getCsrfToken(): string | null {
-    if (typeof document === 'undefined') {
-        return null;
-    }
+  if (typeof document === 'undefined') {
+    return null;
+  }
 
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
 
-    if (!match) {
-        return null;
-    }
+  if (!match) {
+    return null;
+  }
 
-    return decodeURIComponent(match[1]);
+  return decodeURIComponent(match[1]);
 }
 
 /**
  * Merge the server raw settings object into our typed defaults.
  */
-function hydrateSettings(
-    raw: Record<string, unknown> | null | undefined,
-): UserSettings {
-    return { ...defaults, ...raw } as UserSettings;
+function hydrateSettings(raw: Record<string, unknown> | null | undefined): UserSettings {
+  return { ...defaults, ...raw } as UserSettings;
 }
 
 /**
@@ -74,105 +64,98 @@ function hydrateSettings(
  *   const { densityClass } = useSettings()
  */
 export type DensityClassMap = {
-    /** Padding and font size for table/data cells */
-    cell: string;
-    /** Padding and font size for table header cells */
-    header: string;
-    /** Spacing between card elements */
-    cardGap: string;
-    /** Overall padding for list items */
-    listItem: string;
+  /** Padding and font size for table/data cells */
+  cell: string;
+  /** Padding and font size for table header cells */
+  header: string;
+  /** Spacing between card elements */
+  cardGap: string;
+  /** Overall padding for list items */
+  listItem: string;
 };
 
 const densityClassMap: Record<UserSettings['density'], DensityClassMap> = {
-    compact: {
-        cell: 'p-2 text-sm',
-        header: 'px-2 py-1.5 text-xs',
-        cardGap: 'gap-3',
-        listItem: 'py-1.5 px-2',
-    },
-    comfortable: {
-        cell: 'p-4',
-        header: 'px-4 py-3 text-sm',
-        cardGap: 'gap-6',
-        listItem: 'py-3 px-4',
-    },
+  compact: {
+    cell: 'p-2 text-sm',
+    header: 'px-2 py-1.5 text-xs',
+    cardGap: 'gap-3',
+    listItem: 'py-1.5 px-2',
+  },
+  comfortable: {
+    cell: 'p-4',
+    header: 'px-4 py-3 text-sm',
+    cardGap: 'gap-6',
+    listItem: 'py-3 px-4',
+  },
 };
 
 export function useSettings() {
-    const rawSettings = computed(
-        () =>
-            (usePage().props.auth.user as Record<string, unknown>)?.settings as
-                Record<string, unknown> | null | undefined,
-    );
+  const rawSettings = computed(
+    () => (usePage().props.auth.user as Record<string, unknown>)?.settings as Record<string, unknown> | null | undefined
+  );
 
-    const settings = reactive<UserSettings>(hydrateSettings(rawSettings.value));
+  const settings = reactive<UserSettings>(hydrateSettings(rawSettings.value));
 
-    // Keep the reactive object in sync when shared props change
-    watch(rawSettings, (newRaw) => {
-        const hydrated = hydrateSettings(newRaw);
-        (Object.keys(hydrated) as (keyof UserSettings)[]).forEach((key) => {
-            (settings as Record<string, unknown>)[key] = hydrated[key];
-        });
+  // Keep the reactive object in sync when shared props change
+  watch(rawSettings, newRaw => {
+    const hydrated = hydrateSettings(newRaw);
+    (Object.keys(hydrated) as (keyof UserSettings)[]).forEach(key => {
+      (settings as Record<string, unknown>)[key] = hydrated[key];
     });
+  });
 
-    /**
-     * Persist partial settings to the server and update local state on success.
-     */
-    async function updateSettings(
-        partial: Partial<UserSettings>,
-    ): Promise<void> {
-        const csrfToken = getCsrfToken();
+  /**
+   * Persist partial settings to the server and update local state on success.
+   */
+  async function updateSettings(partial: Partial<UserSettings>): Promise<void> {
+    const csrfToken = getCsrfToken();
 
-        if (!csrfToken) {
-            return;
-        }
-
-        try {
-            const response = await fetch(updateSettingsRoute.url(), {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-XSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify(partial),
-            });
-
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`);
-            }
-
-            // Update local reactive state immediately
-            (Object.keys(partial) as (keyof UserSettings)[]).forEach((key) => {
-                if (key in settings) {
-                    (settings as Record<string, unknown>)[key] = partial[
-                        key
-                    ] as unknown;
-                }
-            });
-
-            // Sync back to Inertia shared props so other components see the change
-            const page = usePage();
-            const user = page.props.auth.user as Record<string, unknown>;
-            const currentSettings =
-                (user.settings as Record<string, unknown>) ?? {};
-            user.settings = { ...currentSettings, ...partial };
-        } catch {
-            toast.error('No se pudieron guardar las preferencias');
-        }
+    if (!csrfToken) {
+      return;
     }
 
-    /**
-     * Computed density class map that updates when density changes.
-     */
-    const densityClass = computed<DensityClassMap>(
-        () => densityClassMap[settings.density] ?? densityClassMap.comfortable,
-    );
+    try {
+      const response = await fetch(updateSettingsRoute.url(), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-XSRF-TOKEN': csrfToken,
+        },
+        body: JSON.stringify(partial),
+      });
 
-    return {
-        settings,
-        updateSettings,
-        densityClass,
-    };
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      // Update local reactive state immediately
+      (Object.keys(partial) as (keyof UserSettings)[]).forEach(key => {
+        if (key in settings) {
+          (settings as Record<string, unknown>)[key] = partial[key] as unknown;
+        }
+      });
+
+      // Sync back to Inertia shared props so other components see the change
+      const page = usePage();
+      const user = page.props.auth.user as Record<string, unknown>;
+      const currentSettings = (user.settings as Record<string, unknown>) ?? {};
+      user.settings = { ...currentSettings, ...partial };
+    } catch {
+      toast.error('No se pudieron guardar las preferencias');
+    }
+  }
+
+  /**
+   * Computed density class map that updates when density changes.
+   */
+  const densityClass = computed<DensityClassMap>(
+    () => densityClassMap[settings.density] ?? densityClassMap.comfortable
+  );
+
+  return {
+    settings,
+    updateSettings,
+    densityClass,
+  };
 }
