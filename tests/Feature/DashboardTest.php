@@ -3,6 +3,8 @@
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Debt;
+use App\Models\Goal;
+use App\Models\GoalContribution;
 use App\Models\Movement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,6 +51,12 @@ test('dashboard has correct inertia props', function () {
         ->has('upcomingProjections')
         ->has('chartData')
         ->has('debtsOverview')
+        ->has('goalsOverview')
+        ->has('goalsSummary', fn ($goals) => $goals
+            ->has('apartado')
+            ->has('available_real')
+            ->has('active_count')
+        )
         ->has('selectedMonth')
         ->has('currentMonth')
     );
@@ -461,6 +469,94 @@ test('debts overview only includes the current user debts', function () {
     $response->assertInertia(fn ($page) => $page
         ->has('debtsOverview', 1)
         ->where('debtsOverview.0.name', 'Mi deuda')
+    );
+});
+
+// ─── Active Goals ─────────────────────────────────────────────────
+
+test('goals summary computes available_real as realBalance minus apartado', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Real balance: 1300
+    Movement::factory()->create([
+        'user_id' => $user->id,
+        'amount' => 1300,
+        'is_projected' => false,
+    ]);
+
+    // Active goal with 300 apartado
+    $activeGoal = Goal::factory()->create(['user_id' => $user->id, 'name' => 'Laptop nueva']);
+    GoalContribution::factory()->create(['goal_id' => $activeGoal->id, 'amount' => 300]);
+
+    // Completed goal must NOT reduce available_real
+    $completedGoal = Goal::factory()->completed()->create(['user_id' => $user->id]);
+    GoalContribution::factory()->create(['goal_id' => $completedGoal->id, 'amount' => 700]);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('goalsSummary.apartado', 300)
+        ->where('goalsSummary.available_real', 1000)
+        ->where('goalsSummary.active_count', 1)
+    );
+});
+
+test('goals overview includes active goals with progress and remaining', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Viaje a Bariloche',
+        'target_amount' => 2000,
+        'target_date' => now()->addMonths(2)->toDateString(),
+    ]);
+    GoalContribution::factory()->create(['goal_id' => $goal->id, 'amount' => 500]);
+
+    // Completed goals must be excluded
+    Goal::factory()->completed()->create(['user_id' => $user->id, 'name' => 'Meta completada']);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('goalsOverview', 1)
+        ->where('goalsOverview.0.name', 'Viaje a Bariloche')
+        ->where('goalsOverview.0.target_amount', fn ($value) => (float) $value === 2000.0)
+        ->where('goalsOverview.0.progress_amount', fn ($value) => (float) $value === 500.0)
+        ->where('goalsOverview.0.percent', 25)
+        ->where('goalsOverview.0.remaining_amount', fn ($value) => (float) $value === 1500.0)
+        ->where('goalsOverview.0.target_date', now()->addMonths(2)->toDateString())
+        ->where('goalsOverview.0.days_to_target', fn ($value) => is_int($value) && $value > 0)
+    );
+});
+
+test('goals overview is empty when user has no active goals', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('goalsOverview', 0)
+        ->where('goalsSummary.apartado', 0)
+        ->where('goalsSummary.active_count', 0)
+    );
+});
+
+test('goals overview only includes the current user goals', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $this->actingAs($user);
+
+    Goal::factory()->create(['user_id' => $user->id, 'name' => 'Mi meta']);
+    Goal::factory()->create(['user_id' => $other->id, 'name' => 'Meta ajena']);
+
+    $response = $this->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('goalsOverview', 1)
+        ->where('goalsOverview.0.name', 'Mi meta')
     );
 });
 

@@ -7,6 +7,7 @@ import { useCurrency } from '@/composables/useCurrency';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { dashboard } from '@/routes';
 import deudas from '@/routes/deudas';
+import metas from '@/routes/metas';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { computed } from 'vue';
@@ -28,6 +29,23 @@ interface ActiveDebtSummary {
   rate_factor: number;
   next_date: string | null;
   next_amount: number;
+}
+
+interface ActiveGoalSummary {
+  id: number;
+  name: string;
+  target_amount: number;
+  progress_amount: number;
+  percent: number;
+  remaining_amount: number;
+  target_date: string | null;
+  days_to_target: number | null;
+}
+
+interface GoalsSummary {
+  apartado: number;
+  available_real: number;
+  active_count: number;
 }
 
 interface UpcomingMovement {
@@ -59,6 +77,8 @@ const props = defineProps<{
     reconciled: boolean;
   };
   debtsOverview: ActiveDebtSummary[];
+  goalsOverview: ActiveGoalSummary[];
+  goalsSummary: GoalsSummary;
   upcomingProjections: UpcomingMovement[];
   chartData: ChartPoint[];
   selectedMonth: string;
@@ -131,6 +151,14 @@ function debtProgress(debt: ActiveDebtSummary): number {
   }
 
   return Math.min(100, Math.round((debt.paid_installments / debt.installments_count) * 100));
+}
+
+function goalProgressColor(percent: number): string {
+  if (percent >= 75) {
+    return 'bg-amber-500';
+  }
+
+  return 'bg-green-500';
 }
 
 function progressColor(pct: number): string {
@@ -429,6 +457,98 @@ function formatDate(dateStr: string): string {
           class="py-4 text-center text-sm text-muted-foreground"
         >
           No hay deudas activas.
+        </p>
+      </CardContent>
+    </Card>
+
+    <!-- Active Goals -->
+    <Card>
+      <CardHeader class="flex-row items-center justify-between space-y-0">
+        <CardTitle class="text-base">Metas</CardTitle>
+        <Button
+          variant="ghost"
+          size="sm"
+          as-child
+        >
+          <Link :href="metas.index()">Ver todas</Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div class="mb-4 grid gap-3 sm:grid-cols-2">
+          <div class="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
+            <span class="text-muted-foreground">Apartado en metas</span>
+            <span class="font-semibold tabular-nums">
+              {{ format(goalsSummary.apartado) }}
+            </span>
+          </div>
+          <div class="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-sm">
+            <span class="text-muted-foreground">Disponible real</span>
+            <span
+              class="tabular-nums"
+              :class="
+                goalsSummary.available_real < 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'font-semibold'
+              "
+            >
+              {{ format(goalsSummary.available_real) }}
+            </span>
+          </div>
+        </div>
+        <div
+          v-if="goalsOverview.length > 0"
+          class="space-y-4"
+        >
+          <div
+            v-for="goal in goalsOverview"
+            :key="goal.id"
+            class="space-y-1.5"
+          >
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <Link
+                :href="metas.index()"
+                class="truncate font-medium transition-colors hover:underline"
+              >
+                {{ goal.name }}
+              </Link>
+              <span class="shrink-0 text-muted-foreground tabular-nums">
+                {{ format(goal.progress_amount) }} · {{ goal.percent }}%
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  role="progressbar"
+                  :aria-valuenow="goal.percent"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-label="`Progreso de ${goal.name}: ${goal.percent}%`"
+                  class="h-full rounded-full transition-all duration-300"
+                  :class="goalProgressColor(goal.percent)"
+                  :style="{
+                    width: Math.min(goal.percent, 100) + '%',
+                  }"
+                />
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Falta
+                <span class="font-medium tabular-nums">
+                  {{ format(goal.remaining_amount) }}
+                </span>
+              </span>
+              <span v-if="goal.target_date && goal.days_to_target !== null && goal.days_to_target < 0"> Vencida </span>
+              <span v-else-if="goal.target_date && goal.days_to_target !== null">
+                {{ goal.days_to_target === 0 ? 'Hoy es el día' : `${goal.days_to_target} días` }}
+              </span>
+              <span v-else>Sin fecha</span>
+            </div>
+          </div>
+        </div>
+        <p
+          v-else
+          class="py-4 text-center text-sm text-muted-foreground"
+        >
+          No hay metas activas.
         </p>
       </CardContent>
     </Card>

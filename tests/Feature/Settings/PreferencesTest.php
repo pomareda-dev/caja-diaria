@@ -161,7 +161,7 @@ test('photo upload stores valid image and updates settings', function () {
     $file = UploadedFile::fake()->image('me.jpg', 100, 100);
 
     $response = $this->actingAs($user)
-        ->post(route('settings.profile-photo.store'), ['photo' => $file]);
+        ->post(route('config.profile-photo.store'), ['photo' => $file]);
 
     $response->assertOk();
     $response->assertJsonStructure(['avatar_path', 'avatar_url']);
@@ -182,7 +182,7 @@ test('photo upload rejects non-image file', function () {
     $file = UploadedFile::fake()->create('a.txt', 1, 'text/plain');
 
     $this->actingAs($user)
-        ->post(route('settings.profile-photo.store'), ['photo' => $file])
+        ->post(route('config.profile-photo.store'), ['photo' => $file])
         ->assertSessionHasErrors('photo');
 });
 
@@ -191,7 +191,7 @@ test('photo upload rejects oversized image', function () {
     $file = UploadedFile::fake()->image('big.png')->size(3000);
 
     $this->actingAs($user)
-        ->post(route('settings.profile-photo.store'), ['photo' => $file])
+        ->post(route('config.profile-photo.store'), ['photo' => $file])
         ->assertSessionHasErrors('photo');
 });
 
@@ -202,7 +202,7 @@ test('photo upload replaces previous avatar', function () {
     // Upload first photo
     $fileA = UploadedFile::fake()->image('avatar.jpg', 100, 100);
     $this->actingAs($user)
-        ->post(route('settings.profile-photo.store'), ['photo' => $fileA])
+        ->post(route('config.profile-photo.store'), ['photo' => $fileA])
         ->assertOk();
 
     $pathA = $user->fresh()->settings['avatar_path'];
@@ -210,7 +210,7 @@ test('photo upload replaces previous avatar', function () {
     // Upload second photo (different extension to verify deletion)
     $fileB = UploadedFile::fake()->image('avatar.png', 100, 100);
     $this->actingAs($user)
-        ->post(route('settings.profile-photo.store'), ['photo' => $fileB])
+        ->post(route('config.profile-photo.store'), ['photo' => $fileB])
         ->assertOk();
 
     $pathB = $user->fresh()->settings['avatar_path'];
@@ -220,7 +220,7 @@ test('photo upload replaces previous avatar', function () {
 });
 
 test('photo upload requires authentication', function () {
-    $response = $this->post(route('settings.profile-photo.store'));
+    $response = $this->post(route('config.profile-photo.store'));
 
     $response->assertRedirect(route('login'));
 });

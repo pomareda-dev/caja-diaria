@@ -192,5 +192,38 @@ class CajaDiariaDemoSeeder extends Seeder
             'is_projected' => false,
             'sort_order' => 0,
         ]);
+
+        // ─── Goals ────────────────────────────────────────────────
+
+        $fondoEmergencia = $user->goals()->create([
+            'name' => 'Fondo de emergencia',
+            'target_amount' => 3000,
+            'target_date' => $today->copy()->addMonths(6)->format('Y-m-d'),
+        ]);
+
+        $fondoEmergencia->contributions()->create([
+            'date' => $today->copy()->subMonths(2)->format('Y-m-d'),
+            'amount' => 900,
+            'notes' => 'Aporte inicial',
+        ]);
+
+        $fondoEmergencia->contributions()->create([
+            'date' => $today->copy()->subMonths(1)->format('Y-m-d'),
+            'amount' => 900,
+            'notes' => null,
+        ]);
+
+        $laptop = $user->goals()->create([
+            'name' => 'Laptop nueva',
+            'target_amount' => 2500,
+            'target_date' => $today->copy()->addMonths(3)->format('Y-m-d'),
+            'completed_at' => now(),
+        ]);
+
+        $laptop->contributions()->create([
+            'date' => $today->copy()->subMonths(3)->format('Y-m-d'),
+            'amount' => 2500,
+            'notes' => 'Meta cumplida',
+        ]);
     }
 }

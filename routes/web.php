@@ -4,6 +4,8 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\GoalContributionController;
+use App\Http\Controllers\GoalController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\RecurringTransactionController;
@@ -47,6 +49,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['edit', 'create'])
         ->parameters(['deudas' => 'debt']);
     Route::post('deudas/{debt}/payoff', [DebtController::class, 'payoff'])->name('deudas.payoff');
+
+    // Goals
+    Route::resource('metas', GoalController::class)
+        ->except(['create', 'edit', 'show'])
+        ->parameters(['metas' => 'goal']);
+    Route::post('metas/{goal}/aportes', [GoalContributionController::class, 'store'])
+        ->name('metas.aportes.store');
+    Route::delete('metas/{goal}/aportes/{contribution}', [GoalContributionController::class, 'destroy'])
+        ->name('metas.aportes.destroy');
 
     // Projection view
     Route::get('proyeccion', [ProjectionController::class, 'index'])->name('proyeccion.index');
