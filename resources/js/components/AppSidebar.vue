@@ -16,12 +16,13 @@ import { dashboard } from '@/routes';
 import categorias from '@/routes/categorias';
 import cuentas from '@/routes/cuentas';
 import deudas from '@/routes/deudas';
+import metas from '@/routes/metas';
 import movimientos from '@/routes/movimientos';
 import proyeccion from '@/routes/proyeccion';
 import recurrentes from '@/routes/recurrentes';
 import type { NavItem } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
-import { ArrowLeftRight, HandCoins, LayoutDashboard, LineChart, Repeat, Tags, Wallet } from '@lucide/vue';
+import { ArrowLeftRight, HandCoins, LayoutDashboard, LineChart, Repeat, Tags, Target, Wallet } from '@lucide/vue';
 import { onUnmounted } from 'vue';
 
 const mainNavItems: NavItem[] = [
@@ -54,6 +55,11 @@ const mainNavItems: NavItem[] = [
     title: 'Deudas',
     href: deudas.index(),
     icon: HandCoins,
+  },
+  {
+    title: 'Metas',
+    href: metas.index(),
+    icon: Target,
   },
   {
     title: 'Proyección',

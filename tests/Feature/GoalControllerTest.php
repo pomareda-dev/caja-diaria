@@ -8,14 +8,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-function inertiaHeaders(): array
-{
-    return [
-        'X-Inertia' => 'true',
-        'X-Inertia-Version' => hash_file('xxh128', public_path('build/manifest.json')),
-    ];
-}
-
 // ─── Guest redirect ───────────────────────────────────────────────
 
 test('guests are redirected to the login page', function () {
@@ -36,34 +28,34 @@ test('index renders the goals page with the goal payload', function () {
     ]);
     GoalContribution::factory()->create(['goal_id' => $goal->id, 'amount' => 500]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonCount(1, 'props.goals')
-        ->assertJsonPath('props.goals.0.name', 'Laptop nueva')
-        ->assertJsonPath('props.goals.0.target_amount', fn ($value) => (float) $value === 2000.0)
-        ->assertJsonPath('props.goals.0.target_date', now()->addMonths(2)->toDateString())
-        ->assertJsonPath('props.goals.0.progress_amount', fn ($value) => (float) $value === 500.0)
-        ->assertJsonPath('props.goals.0.percent', 25)
-        ->assertJsonPath('props.goals.0.remaining_amount', fn ($value) => (float) $value === 1500.0)
-        ->assertJsonPath('props.goals.0.can_delete', false)
-        ->assertJsonPath('props.goals.0.is_complete', false)
-        ->assertJsonPath('props.goals.0.days_to_target', fn (int $value) => $value > 0)
-        ->assertJsonCount(1, 'props.goals.0.contributions')
-        ->assertJsonPath('props.goals.0.contributions.0.amount', fn ($value) => (float) $value === 500.0);
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->has('goals', 1)
+        ->where('goals.0.name', 'Laptop nueva')
+        ->where('goals.0.target_amount', fn ($value) => (float) $value === 2000.0)
+        ->where('goals.0.target_date', now()->addMonths(2)->toDateString())
+        ->where('goals.0.progress_amount', fn ($value) => (float) $value === 500.0)
+        ->where('goals.0.percent', 25)
+        ->where('goals.0.remaining_amount', fn ($value) => (float) $value === 1500.0)
+        ->where('goals.0.days_to_target', fn ($value) => is_int($value) && $value > 0)
+        ->where('goals.0.can_delete', false)
+        ->where('goals.0.is_complete', false)
+        ->has('goals.0.contributions', 1)
+        ->where('goals.0.contributions.0.amount', fn ($value) => (float) $value === 500.0));
 });
 
 test('index flags can_delete true when the goal has no contributions', function () {
     $user = User::factory()->create();
     Goal::factory()->create(['user_id' => $user->id]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonPath('props.goals.0.can_delete', true)
-        ->assertJsonCount(0, 'props.goals.0.contributions');
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->where('goals.0.can_delete', true)
+        ->has('goals.0.contributions', 0));
 });
 
 test('index reports days_to_target negative when the target date is past', function () {
@@ -73,11 +65,11 @@ test('index reports days_to_target negative when the target date is past', funct
         'target_date' => now()->subDays(5)->toDateString(),
     ]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonPath('props.goals.0.days_to_target', fn (int $value) => $value < 0);
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->where('goals.0.days_to_target', fn ($value) => is_int($value) && $value < 0));
 });
 
 test('index reports days_to_target null when there is no target date', function () {
@@ -87,11 +79,11 @@ test('index reports days_to_target null when there is no target date', function 
         'target_date' => null,
     ]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonPath('props.goals.0.days_to_target', null);
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->where('goals.0.days_to_target', null));
 });
 
 test('index computes summary apartado and available_real', function () {
@@ -111,12 +103,12 @@ test('index computes summary apartado and available_real', function () {
     $completedGoal = Goal::factory()->completed()->create(['user_id' => $user->id]);
     GoalContribution::factory()->create(['goal_id' => $completedGoal->id, 'amount' => 700]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonPath('props.summary.apartado', fn ($value) => (float) $value === 300.0)
-        ->assertJsonPath('props.summary.available_real', fn ($value) => (float) $value === 1000.0);
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->where('summary.apartado', fn ($value) => (float) $value === 300.0)
+        ->where('summary.available_real', fn ($value) => (float) $value === 1000.0));
 });
 
 test('index only shows the authenticated users goals', function () {
@@ -126,11 +118,11 @@ test('index only shows the authenticated users goals', function () {
     Goal::factory()->count(2)->create(['user_id' => $user->id]);
     Goal::factory()->create(['user_id' => $otherUser->id]);
 
-    $response = $this->actingAs($user)->get(route('metas.index'), inertiaHeaders());
+    $response = $this->actingAs($user)->get(route('metas.index'));
 
-    $response->assertOk()
-        ->assertJsonPath('component', 'Metas/Index')
-        ->assertJsonCount(2, 'props.goals');
+    $response->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Metas/Index')
+        ->has('goals', 2));
 });
 
 // ─── Store ────────────────────────────────────────────────────────
@@ -478,10 +470,12 @@ test('full cycle via endpoints: create, contribute to complete, delete contribut
     $goal->refresh();
     expect($goal->is_complete)->toBeTrue();
 
-    $this->actingAs($user)->get(route('metas.index'), inertiaHeaders())
+    $this->actingAs($user)->get(route('metas.index'))
         ->assertOk()
-        ->assertJsonPath('props.goals.0.is_complete', true)
-        ->assertJsonPath('props.goals.0.progress_amount', fn ($value) => (float) $value === 1000.0);
+        ->assertInertia(fn ($page) => $page
+            ->component('Metas/Index')
+            ->where('goals.0.is_complete', true)
+            ->where('goals.0.progress_amount', fn ($value) => (float) $value === 1000.0));
 
     // Delete the last contribution (400): falls below the target → reopen
     $lastContribution = $goal->contributions()->orderByDesc('id')->first();
@@ -492,8 +486,10 @@ test('full cycle via endpoints: create, contribute to complete, delete contribut
     $goal->refresh();
     expect($goal->is_complete)->toBeFalse();
 
-    $this->actingAs($user)->get(route('metas.index'), inertiaHeaders())
+    $this->actingAs($user)->get(route('metas.index'))
         ->assertOk()
-        ->assertJsonPath('props.goals.0.is_complete', false)
-        ->assertJsonPath('props.goals.0.progress_amount', fn ($value) => (float) $value === 600.0);
+        ->assertInertia(fn ($page) => $page
+            ->component('Metas/Index')
+            ->where('goals.0.is_complete', false)
+            ->where('goals.0.progress_amount', fn ($value) => (float) $value === 600.0));
 });
