@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Debt;
+use App\Models\Goal;
 use App\Models\Movement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -180,6 +181,39 @@ class DashboardController extends Controller
             ->values()
             ->all();
 
+        // ─── Active goals summary (for the goals card) ───
+        $apartado = Goal::apartadoAmount($userId);
+
+        $activeGoals = Goal::where('user_id', $userId)
+            ->whereNull('completed_at')
+            ->withSum('contributions', 'amount')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $goalsOverview = $activeGoals
+            ->map(function (Goal $goal): array {
+                return [
+                    'id' => $goal->id,
+                    'name' => $goal->name,
+                    'target_amount' => (float) $goal->target_amount,
+                    'progress_amount' => (float) $goal->progress_amount,
+                    'percent' => $goal->percent,
+                    'remaining_amount' => (float) $goal->remaining_amount,
+                    'target_date' => $goal->target_date?->toDateString(),
+                    'days_to_target' => $goal->target_date
+                        ? now()->startOfDay()->diffInDays($goal->target_date->copy()->startOfDay(), false)
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $goalsSummary = [
+            'apartado' => $apartado,
+            'available_real' => round($realBalance - $apartado, 2),
+            'active_count' => $activeGoals->count(),
+        ];
+
         return Inertia::render('Dashboard', [
             'cards' => [
                 'realBalance' => $realBalance,
@@ -195,6 +229,8 @@ class DashboardController extends Controller
                 'reconciled' => $reconciled,
             ],
             'debtsOverview' => $debtsOverview,
+            'goalsOverview' => $goalsOverview,
+            'goalsSummary' => $goalsSummary,
             'upcomingProjections' => $upcoming->values()->all(),
             'chartData' => $dailyBalances,
             'selectedMonth' => $selectedMonth->format('Y-m'),
